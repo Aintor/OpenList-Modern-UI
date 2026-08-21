@@ -1,5 +1,6 @@
 import { Obj } from '~/types'
 import { notify } from './notify'
+import { useObjStore } from '~/store/useObjStore'
 
 /**
  * Standardize path string
@@ -36,7 +37,8 @@ export const getDownloadUrl = (
   obj: Obj,
   currentPath: string = '/',
   type: 'direct' | 'proxy' = 'direct',
-  isDownload: boolean = false
+  isDownload: boolean = false,
+  pwd?: string
 ): string => {
   if (obj.raw_url) {
     if (isDownload) {
@@ -64,6 +66,12 @@ export const getDownloadUrl = (
   if (!isShare && obj.sign) {
     params.push(`sign=${encodeURIComponent(obj.sign)}`)
   }
+
+  const effectivePwd = pwd || useObjStore.getState().password
+  if (isShare && effectivePwd) {
+    params.push(`pwd=${encodeURIComponent(effectivePwd)}`)
+  }
+
   if (isDownload) {
     params.push('download')
   }
