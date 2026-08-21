@@ -46,24 +46,13 @@ export async function probeRangeSupport(
   signal?: AbortSignal
 ): Promise<{ supported: boolean; totalBytes: number; contentType: string }> {
   try {
-    // 1. Try HEAD request first
-    const headResp = await fetch(url, { method: 'HEAD', signal })
-    const acceptRanges = headResp.headers.get('Accept-Ranges')
-    const contentLength = headResp.headers.get('Content-Length')
-    const contentType = headResp.headers.get('Content-Type') || 'application/octet-stream'
-
-    if (headResp.ok && acceptRanges === 'bytes' && contentLength) {
-      const total = parseInt(contentLength, 10)
-      if (total > 0) {
-        return { supported: true, totalBytes: total, contentType }
-      }
-    }
-
-    // 2. If HEAD doesn't report Accept-Ranges, probe with Range: bytes=0-0
+    // Single-shot Range: bytes=0-0 probe (avoids HEAD presigned signature 403 mismatch)
     const rangeResp = await fetch(url, {
       headers: { Range: 'bytes=0-0' },
       signal,
     })
+
+    const contentType = rangeResp.headers.get('Content-Type') || 'application/octet-stream'
 
     if (rangeResp.status === 206) {
       const contentRange = rangeResp.headers.get('Content-Range')
@@ -74,9 +63,15 @@ export async function probeRangeSupport(
           return {
             supported: true,
             totalBytes: total,
-            contentType: rangeResp.headers.get('Content-Type') || contentType,
+            contentType,
           }
         }
+      }
+      const fallbackLength = rangeResp.headers.get('Content-Length')
+      return {
+        supported: true,
+        totalBytes: fallbackLength ? parseInt(fallbackLength, 10) : 0,
+        contentType,
       }
     }
 
@@ -87,9 +82,128 @@ export async function probeRangeSupport(
       contentType,
     }
   } catch (err) {
-    console.warn('Range probe failed:', err)
+    console.warn('Range probe fallback:', err)
     return { supported: false, totalBytes: 0, contentType: 'application/octet-stream' }
   }
+}
+
+/**
+ * Standard single-stream downloader for files that do not support Range or small files
+ */
+async function downloadSingleStream(
+  url: string,
+  filename: string,
+  totalBytes: number,
+  contentType: string,
+  onProgress?: (progress: DownloadProgress) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  const response = await fetch(url, { signal })
+  if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to download`)
+
+  const effectiveType = contentType || response.headers.get('Content-Type') || 'application/octet-stream'
+
+  const contentLength = response.headers.get('Content-Length')
+  const actualTotal = totalBytes || (contentLength ? parseInt(contentLength, 10) : 0)
+
+  const isOpfsSupported =
+    typeof navigator !== 'undefined' &&
+    'storage' in navigator &&
+    typeof navigator.storage?.getDirectory === 'function'
+
+  let downloaded = 0
+  let lastTime = Date.now()
+  let lastBytes = 0
+
+  if (response.body && isOpfsSupported) {
+    const rootDir = await navigator.storage.getDirectory()
+    const tempDirName = `dl_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    const tempDir = await rootDir.getDirectoryHandle(tempDirName, { create: true })
+    const fileHandle = await tempDir.getFileHandle(filename, { create: true })
+    const writable = await fileHandle.createWritable()
+    const reader = response.body.getReader()
+
+    try {
+      while (true) {
+        if (signal?.aborted) {
+          await writable.abort()
+          throw new Error('Download aborted')
+        }
+        const { done, value } = await reader.read()
+        if (done) break
+        if (value) {
+          await writable.write(value)
+          downloaded += value.byteLength
+
+          const now = Date.now()
+          const delta = (now - lastTime) / 1000
+          let speed = 0
+          if (delta >= 0.4) {
+            speed = Math.max(0, (downloaded - lastBytes) / delta)
+            lastBytes = downloaded
+            lastTime = now
+          }
+
+          const percent = actualTotal > 0 ? Math.min(99, Math.round((downloaded / actualTotal) * 100)) : 0
+          const remainingSec = speed > 0 && actualTotal > downloaded ? Math.ceil((actualTotal - downloaded) / speed) : 0
+
+          onProgress?.({
+            totalBytes: actualTotal,
+            downloadedBytes: downloaded,
+            percent,
+            speed,
+            remainingSeconds: remainingSec,
+            threads: [],
+            status: 'downloading',
+          })
+        }
+      }
+      await writable.close()
+
+      const finalFile = await fileHandle.getFile()
+      const typedBlob = new Blob([await finalFile.arrayBuffer()], { type: effectiveType })
+      const blobUrl = URL.createObjectURL(typedBlob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+
+      const safeTtlMs = Math.max(60000, Math.min(300000, Math.ceil((actualTotal / (5 * 1024 * 1024)) * 1000)))
+      setTimeout(async () => {
+        try {
+          URL.revokeObjectURL(blobUrl)
+          await rootDir.removeEntry(tempDirName, { recursive: true })
+        } catch (_) {}
+      }, safeTtlMs)
+    } catch (err) {
+      try {
+        await rootDir.removeEntry(tempDirName, { recursive: true })
+      } catch (_) {}
+      throw err
+    }
+  } else {
+    const blob = await response.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
+  }
+
+  onProgress?.({
+    totalBytes: actualTotal,
+    downloadedBytes: actualTotal,
+    percent: 100,
+    speed: 0,
+    remainingSeconds: 0,
+    threads: [],
+    status: 'completed',
+  })
 }
 
 /**
@@ -111,18 +225,9 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
 
   const probe = await probeRangeSupport(url, signal)
 
-  // If Range is unsupported or file is small (< 2MB), throw to let caller fallback to single-stream Blob
-  if (!probe.supported || probe.totalBytes <= 2 * 1024 * 1024) {
-    onProgress?.({
-      totalBytes: probe.totalBytes,
-      downloadedBytes: 0,
-      percent: 0,
-      speed: 0,
-      remainingSeconds: 0,
-      threads: [],
-      status: 'fallback',
-    })
-    throw new Error('Range requests not supported for this URL')
+  // If Range is unsupported or file is small (< 2MB), seamless single-stream download with progress
+  if (!probe.supported || (probe.totalBytes > 0 && probe.totalBytes <= 2 * 1024 * 1024)) {
+    return await downloadSingleStream(url, filename, probe.totalBytes, probe.contentType, onProgress, signal)
   }
 
   const totalBytes = probe.totalBytes
