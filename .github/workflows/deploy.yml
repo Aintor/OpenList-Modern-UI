@@ -1,0 +1,64 @@
+name: Build & Release Frontend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build Modern UI
+        run: pnpm run build
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release-assets
+          # Standard dist tarball for backend
+          tar -czvf release-assets/dist.tar.gz -C dist .
+          # OpenList naming convention tarballs
+          cp release-assets/dist.tar.gz release-assets/openlist-frontend-dist.tar.gz
+          cp release-assets/dist.tar.gz release-assets/openlist-frontend-dist-v0.0.1.tar.gz
+          # Zip archive
+          cd dist && zip -r ../release-assets/dist.zip . && cd ..
+
+      - name: Create or Update GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete existing 'latest' release and tag on remote and locally to recreate it
+          gh release delete latest --yes || true
+          git tag -d latest || true
+          git push origin :refs/tags/latest || true
+
+          # Create and push 'latest' tag
+          git tag latest
+          git push origin latest
+
+          # Create GitHub Release with the compiled assets
+          gh release create latest release-assets/* \
+            --title "OpenList Modern UI Latest Build" \
+            --notes "Automated rolling release of OpenList Modern UI build."
