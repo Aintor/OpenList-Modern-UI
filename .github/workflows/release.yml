@@ -1,0 +1,77 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Target version tag (e.g., v0.0.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version Tag
+        id: get_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build UI Production Bundle
+        run: pnpm run build
+
+      - name: Package Release Tarballs
+        run: |
+          TAG="${{ steps.get_tag.outputs.tag }}"
+          
+          # Create root-level tarball compatible with backend build scripts
+          tar -czvf dist.tar.gz -C dist .
+          
+          # Create named release tarball
+          cp dist.tar.gz "openlist-frontend-dist-${TAG}.tar.gz"
+          
+          # Create zip archive
+          cd dist && zip -r ../dist.zip . && cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: OpenList Modern UI ${{ steps.get_tag.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist.tar.gz
+            openlist-frontend-dist-*.tar.gz
+            dist.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
