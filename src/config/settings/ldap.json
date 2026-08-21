@@ -1,0 +1,87 @@
+{
+  "id": "ldap",
+  "groupNumber": 8,
+  "titleKey": "manage.sidemenu.ldap",
+  "features": {
+    "allowSave": true,
+    "allowRefresh": true,
+    "allowResetDefault": true
+  },
+  "sections": [
+    {
+      "id": "ldap_config",
+      "titleKey": "manage.sidemenu.ldap",
+      "fields": [
+        {
+          "key": "ldap_login_enabled",
+          "type": "switch",
+          "labelKey": "settings.ldap_login_enabled",
+          "helpKey": "settings.ldap_login_enabled-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "ldap_skip_tls_verify",
+          "type": "switch",
+          "labelKey": "settings.ldap_skip_tls_verify",
+          "helpKey": "settings.ldap_skip_tls_verify-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "ldap_server",
+          "type": "text",
+          "labelKey": "settings.ldap_server",
+          "helpKey": "settings.ldap_server-tips",
+          "placeholderKey": "ldap://127.0.0.1:389"
+        },
+        {
+          "key": "ldap_manager_dn",
+          "type": "text",
+          "labelKey": "settings.ldap_manager_dn",
+          "helpKey": "settings.ldap_manager_dn-tips",
+          "placeholderKey": "cn=admin,dc=example,dc=org"
+        },
+        {
+          "key": "ldap_manager_password",
+          "type": "password",
+          "labelKey": "settings.ldap_manager_password",
+          "helpKey": "settings.ldap_manager_password-tips"
+        },
+        {
+          "key": "ldap_user_search_base",
+          "type": "text",
+          "labelKey": "settings.ldap_user_search_base",
+          "helpKey": "settings.ldap_user_search_base-tips",
+          "placeholderKey": "ou=users,dc=example,dc=org"
+        },
+        {
+          "key": "ldap_user_search_filter",
+          "type": "text",
+          "labelKey": "settings.ldap_user_search_filter",
+          "helpKey": "settings.ldap_user_search_filter-tips",
+          "defaultValue": "(uid=%s)"
+        },
+        {
+          "key": "ldap_default_dir",
+          "type": "text",
+          "labelKey": "settings.ldap_default_dir",
+          "helpKey": "settings.ldap_default_dir-tips",
+          "defaultValue": "/"
+        },
+        {
+          "key": "ldap_default_permission",
+          "type": "number",
+          "labelKey": "settings.ldap_default_permission",
+          "helpKey": "settings.ldap_default_permission-tips",
+          "defaultValue": 0
+        },
+        {
+          "key": "ldap_login_tips",
+          "type": "text",
+          "labelKey": "settings.ldap_login_tips",
+          "helpKey": "settings.ldap_login_tips-tips",
+          "defaultValue": "login with ldap"
+        }
+      ]
+    }
+  ]
+}

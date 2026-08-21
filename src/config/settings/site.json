@@ -1,0 +1,77 @@
+{
+  "id": "site",
+  "groupNumber": 1,
+  "titleKey": "manage.sidemenu.site",
+  "features": {
+    "allowSave": true,
+    "allowRefresh": true,
+    "allowResetDefault": true
+  },
+  "sections": [
+    {
+      "id": "site_basic",
+      "titleKey": "manage.sidemenu.site",
+      "fields": [
+        {
+          "key": "version",
+          "type": "text",
+          "labelKey": "settings.version",
+          "readOnly": true
+        },
+        {
+          "key": "site_title",
+          "type": "text",
+          "labelKey": "settings.site_title",
+          "helpKey": "settings.site_title-tips",
+          "defaultValue": "OpenList"
+        },
+        {
+          "key": "pagination_type",
+          "type": "select",
+          "labelKey": "settings.pagination_type",
+          "helpKey": "settings.pagination_type-tips",
+          "defaultValue": "all",
+          "options": [
+            { "value": "all", "labelKey": "settings.pagination_types.all", "label": "全量一次性加载" },
+            { "value": "pagination", "labelKey": "settings.pagination_types.pagination", "label": "经典页码分页" },
+            { "value": "load_more", "labelKey": "settings.pagination_types.load_more", "label": "点击按钮加载更多" },
+            { "value": "auto_load_more", "labelKey": "settings.pagination_types.auto_load_more", "label": "滚动到底部自动加载更多" }
+          ]
+        },
+        {
+          "key": "default_page_size",
+          "type": "number",
+          "labelKey": "settings.default_page_size",
+          "helpKey": "settings.default_page_size-tips",
+          "defaultValue": 30
+        },
+        {
+          "key": "allow_indexed",
+          "type": "switch",
+          "labelKey": "settings.allow_indexed",
+          "helpKey": "settings.allow_indexed-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "allow_mounted",
+          "type": "switch",
+          "labelKey": "settings.allow_mounted",
+          "helpKey": "settings.allow_mounted-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "announcement",
+          "type": "textarea",
+          "labelKey": "settings.announcement",
+          "helpKey": "settings.announcement-tips"
+        },
+        {
+          "key": "robots_txt",
+          "type": "code",
+          "labelKey": "settings.robots_txt",
+          "helpKey": "settings.robots_txt-tips"
+        }
+      ]
+    }
+  ]
+}

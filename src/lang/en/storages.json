@@ -1,0 +1,70 @@
+{
+  "common": {
+    "export": "Export",
+    "export_title": "Export storages as JSON",
+    "export_tips": "Please copy the storages JSON above.",
+    "import": "Import",
+    "import_title": "Import storages from JSON",
+    "import_success": "Imported successfully!",
+    "import_tips": "Paste exported JSON storages to import.",
+    "mount_path": "Mount Path",
+    "mount_path-tips": "Path to mount, must be unique",
+    "driver": "Driver",
+    "order": "Order",
+    "order-tips": "Used for sorting",
+    "usage": "Usage",
+    "status": "Status",
+    "remark": "Remark",
+    "cache_expiration": "Cache Expiration",
+    "cache_expiration-tips": "Cache expiration time in minutes for this storage",
+    "custom_cache_policies": "Custom Cache Policies",
+    "custom_cache_policies-tips": "Custom cache expiration rules in minutes",
+    "down_proxy_url": "Download Proxy URL",
+    "disable_proxy_sign": "Disable Proxy Sign",
+    "disable_proxy_sign-tips": "Disable signature authentication for download proxy URL",
+    "web_proxy": "Web Proxy",
+    "webdav_policy": "WebDAV Policy",
+    "proxy_range": "Proxy Range",
+    "proxy_range-tips": "Requires proxy enabled",
+    "webdav_policys": {
+      "302_redirect": "302 Redirect",
+      "use_proxy_url": "Use Proxy URL",
+      "native_proxy": "Native Proxy"
+    },
+    "order_by": "Order By",
+    "order_by-tips": "Default field for sorting directory files",
+    "order_bys": {
+      "name": "Name",
+      "size": "Size",
+      "modified": "Modified Time"
+    },
+    "order_direction": "Order Direction",
+    "order_direction-tips": "Sort direction (ascending or descending)",
+    "order_directions": {
+      "asc": "Ascending",
+      "desc": "Descending"
+    },
+    "extract_folder": "Folder Order",
+    "extract_folder-tips": "Folder placement in sorting results (front or back)",
+    "extract_folders": {
+      "front": "Folders on Top",
+      "back": "Folders on Bottom"
+    },
+    "enable_sign": "Enable Sign",
+    "enable_sign-tips": "Enforce signature parameter validation for direct links of this storage",
+    "disable_index": "Disable Index",
+    "disable_index-tips": "Disable search index building for this storage"
+  },
+  "table_fields": {
+    "status": {
+      "work": "Working",
+      "disabled": "Disabled"
+    }
+  },
+  "other": {
+    "start_load_success": "Start Loading",
+    "load_success": "Loaded successfully",
+    "edit_storage": "Edit Storage",
+    "add_storage": "Add Storage"
+  }
+}

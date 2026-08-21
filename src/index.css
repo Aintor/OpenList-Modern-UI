@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-hover: var(--primary-subtle-hover);
+  --color-primary-ring: var(--primary-ring);
+
+  /* Dynamically alias indigo scale to user's main_color */
+  --color-indigo-50: var(--primary-50);
+  --color-indigo-100: var(--primary-100);
+  --color-indigo-200: var(--primary-200);
+  --color-indigo-300: var(--primary-300);
+  --color-indigo-400: var(--primary-400);
+  --color-indigo-500: var(--primary-500);
+  --color-indigo-600: var(--primary-600);
+  --color-indigo-700: var(--primary-700);
+  --color-indigo-800: var(--primary-800);
+  --color-indigo-900: var(--primary-900);
+  --color-indigo-950: var(--primary-950);
+
+  /* Immersive dark & light background surfaces */
+  --color-slate-950: var(--bg-dark-base);
+  --color-slate-900: var(--bg-dark-surface);
+  --color-slate-800: var(--bg-dark-elevated);
+}
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    --primary-50: hsl(209, 95%, 97%);
+    --primary-100: hsl(209, 90%, 93%);
+    --primary-200: hsl(209, 90%, 86%);
+    --primary-300: hsl(209, 90%, 74%);
+    --primary-400: hsl(209, 90%, 62%);
+    --primary-500: #1890ff;
+    --primary-600: #1890ff;
+    --primary-700: #096dd9;
+    --primary-800: #0050b3;
+    --primary-900: hsl(209, 60%, 18%);
+    --primary-950: hsl(209, 50%, 10%);
+
+    --primary: #1890ff;
+    --primary-hover: #096dd9;
+    --primary-active: #0050b3;
+    --primary-subtle: rgba(24, 144, 255, 0.12);
+    --primary-subtle-hover: rgba(24, 144, 255, 0.2);
+    --primary-ring: rgba(24, 144, 255, 0.25);
+    
+    --bg-light-base: #f8fafc;
+    --bg-light-surface: #ffffff;
+    --bg-light-elevated: #f1f5f9;
+    --border-light: #e2e8f0;
+
+    --bg-dark-base: #030816;
+    --bg-dark-surface: #0a1128;
+    --bg-dark-elevated: #111d42;
+    --border-dark: #1e2c56;
+
+    --selection-area-bg: rgba(24, 144, 255, 0.15);
+    --selection-area-border: rgba(24, 144, 255, 0.7);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    overflow-y: overlay;
+    background-color: var(--bg-light-base);
+    color: #0f172a;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  html.dark body,
+  .dark body {
+    background-color: var(--bg-dark-base);
+    color: #f8fafc;
+  }
+
+  /* Global dark mode focus prevention against white-on-white text */
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    background-color: var(--bg-dark-surface) !important;
+    color: #f8fafc !important;
+  }
+}
+
+/* Custom modern scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Selection lasso styling for @viselect */
+.selection-area {
+  background: var(--selection-area-bg);
+  border: 1.5px solid var(--selection-area-border);
+  border-radius: 6px;
+  backdrop-filter: blur(1px);
+}
+
+/* Video.js v10 Seekbar Hover/Drag Time Tooltip & Preview Enhancements */
+.media-default-skin .media-slider__value,
+.media-skin-video .media-preview-value,
+.media-slider-preview .media-preview-value,
+.media-slider__preview .media-slider__value,
+[data-part="preview-value"],
+[data-part="slider-value"],
+.media-preview-value,
+.media-slider__value {
+  background-color: rgba(15, 23, 42, 0.92) !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  font-family: var(--font-mono, monospace) !important;
+  padding: 3px 8px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  text-shadow: none !important;
+  pointer-events: none !important;
+  z-index: 50 !important;
+}
+
+.media-default-skin {
+  --media-accent-color: var(--primary, #6366f1);
+  --accent-color: var(--primary, #6366f1);
+}

@@ -1,0 +1,64 @@
+{
+  "id": "ftp",
+  "groupNumber": 10,
+  "titleKey": "manage.sidemenu.ftp",
+  "features": {
+    "allowSave": true,
+    "allowRefresh": true,
+    "allowResetDefault": true
+  },
+  "sections": [
+    {
+      "id": "ftp_gateway",
+      "titleKey": "manage.sidemenu.ftp",
+      "fields": [
+        {
+          "key": "ftp_public_host",
+          "type": "text",
+          "labelKey": "settings.ftp_public_host",
+          "helpKey": "settings.ftp_public_host-tips",
+          "defaultValue": "127.0.0.1"
+        },
+        {
+          "key": "ftp_pasv_port_map",
+          "type": "text",
+          "labelKey": "settings.ftp_pasv_port_map",
+          "helpKey": "settings.ftp_pasv_port_map-tips"
+        },
+        {
+          "key": "ftp_tls_private_key_path",
+          "type": "text",
+          "labelKey": "settings.ftp_tls_private_key_path",
+          "helpKey": "settings.ftp_tls_private_key_path-tips"
+        },
+        {
+          "key": "ftp_tls_public_cert_path",
+          "type": "text",
+          "labelKey": "settings.ftp_tls_public_cert_path",
+          "helpKey": "settings.ftp_tls_public_cert_path-tips"
+        },
+        {
+          "key": "ftp_mandatory_tls",
+          "type": "switch",
+          "labelKey": "settings.ftp_mandatory_tls",
+          "helpKey": "settings.ftp_mandatory_tls-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "ftp_implicit_tls",
+          "type": "switch",
+          "labelKey": "settings.ftp_implicit_tls",
+          "helpKey": "settings.ftp_implicit_tls-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "sftp_disable_password_login",
+          "type": "switch",
+          "labelKey": "settings.sftp_disable_password_login",
+          "helpKey": "settings.sftp_disable_password_login-tips",
+          "defaultValue": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "id": "preview",
+  "groupNumber": 3,
+  "titleKey": "manage.sidemenu.preview",
+  "features": {
+    "allowSave": true,
+    "allowRefresh": true,
+    "allowResetDefault": true
+  },
+  "sections": [
+    {
+      "id": "preview_extensions",
+      "titleKey": "manage.sidemenu.preview",
+      "fields": [
+        {
+          "key": "text_types",
+          "type": "textarea",
+          "labelKey": "settings.text_types",
+          "helpKey": "settings.text_types-tips"
+        },
+        {
+          "key": "audio_types",
+          "type": "textarea",
+          "labelKey": "settings.audio_types",
+          "helpKey": "settings.audio_types-tips"
+        },
+        {
+          "key": "video_types",
+          "type": "textarea",
+          "labelKey": "settings.video_types",
+          "helpKey": "settings.video_types-tips"
+        },
+        {
+          "key": "image_types",
+          "type": "textarea",
+          "labelKey": "settings.image_types",
+          "helpKey": "settings.image_types-tips"
+        },
+        {
+          "key": "proxy_types",
+          "type": "textarea",
+          "labelKey": "settings.proxy_types",
+          "helpKey": "settings.proxy_types-tips"
+        },
+        {
+          "key": "proxy_ignore_headers",
+          "type": "textarea",
+          "labelKey": "settings.proxy_ignore_headers",
+          "helpKey": "settings.proxy_ignore_headers-tips"
+        },
+        {
+          "key": "iframe_previews",
+          "type": "code",
+          "labelKey": "settings.iframe_previews",
+          "helpKey": "settings.iframe_previews-tips"
+        },
+        {
+          "key": "external_previews",
+          "type": "code",
+          "labelKey": "settings.external_previews",
+          "helpKey": "settings.external_previews-tips"
+        },
+        {
+          "key": "audio_cover",
+          "type": "text",
+          "labelKey": "settings.audio_cover",
+          "helpKey": "settings.audio_cover-tips"
+        },
+        {
+          "key": "non_efs_zip_encoding",
+          "type": "text",
+          "labelKey": "settings.non_efs_zip_encoding",
+          "helpKey": "settings.non_efs_zip_encoding-tips",
+          "defaultValue": "IBM437"
+        },
+        {
+          "key": "audio_autoplay",
+          "type": "switch",
+          "labelKey": "settings.audio_autoplay",
+          "helpKey": "settings.audio_autoplay-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "video_autoplay",
+          "type": "switch",
+          "labelKey": "settings.video_autoplay",
+          "helpKey": "settings.video_autoplay-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "preview_download_by_default",
+          "type": "switch",
+          "labelKey": "settings.preview_download_by_default",
+          "helpKey": "settings.preview_download_by_default-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "preview_archives_by_default",
+          "type": "switch",
+          "labelKey": "settings.preview_archives_by_default",
+          "helpKey": "settings.preview_archives_by_default-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "share_preview_download_by_default",
+          "type": "switch",
+          "labelKey": "settings.share_preview_download_by_default",
+          "helpKey": "settings.share_preview_download_by_default-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "share_preview_archives_by_default",
+          "type": "switch",
+          "labelKey": "settings.share_preview_archives_by_default",
+          "helpKey": "settings.share_preview_archives_by_default-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "readme_autorender",
+          "type": "switch",
+          "labelKey": "settings.readme_autorender",
+          "helpKey": "settings.readme_autorender-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "filter_readme_scripts",
+          "type": "switch",
+          "labelKey": "settings.filter_readme_scripts",
+          "helpKey": "settings.filter_readme_scripts-tips",
+          "defaultValue": true
+        }
+      ]
+    }
+  ]
+}

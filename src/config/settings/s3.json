@@ -1,0 +1,37 @@
+{
+  "id": "s3",
+  "groupNumber": 9,
+  "titleKey": "manage.sidemenu.s3",
+  "features": {
+    "allowSave": true,
+    "allowRefresh": true,
+    "allowResetDefault": true
+  },
+  "sections": [
+    {
+      "id": "s3_gateway",
+      "titleKey": "manage.sidemenu.s3",
+      "fields": [
+        {
+          "key": "s3_access_key_id",
+          "type": "text",
+          "labelKey": "settings.s3_access_key_id",
+          "helpKey": "settings.s3_access_key_id-tips"
+        },
+        {
+          "key": "s3_secret_access_key",
+          "type": "password",
+          "labelKey": "settings.s3_secret_access_key",
+          "helpKey": "settings.s3_secret_access_key-tips"
+        },
+        {
+          "key": "s3_buckets",
+          "type": "code",
+          "labelKey": "settings.s3_buckets",
+          "helpKey": "settings.s3_buckets-tips",
+          "defaultValue": "[]"
+        }
+      ]
+    }
+  ]
+}

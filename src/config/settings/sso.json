@@ -1,0 +1,117 @@
+{
+  "id": "sso",
+  "groupNumber": 7,
+  "titleKey": "manage.sidemenu.sso",
+  "features": {
+    "allowSave": true,
+    "allowRefresh": true,
+    "allowResetDefault": true
+  },
+  "sections": [
+    {
+      "id": "sso_config",
+      "titleKey": "manage.sidemenu.sso",
+      "fields": [
+        {
+          "key": "sso_login_enabled",
+          "type": "switch",
+          "labelKey": "settings.sso_login_enabled",
+          "helpKey": "settings.sso_login_enabled-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "sso_login_platform",
+          "type": "select",
+          "labelKey": "settings.sso_login_platform",
+          "helpKey": "settings.sso_login_platform-tips",
+          "defaultValue": "Casdoor",
+          "options": [
+            { "value": "Casdoor", "labelKey": "settings.sso_login_platforms.Casdoor", "label": "Casdoor" },
+            { "value": "Github", "labelKey": "settings.sso_login_platforms.Github", "label": "GitHub" },
+            { "value": "Microsoft", "labelKey": "settings.sso_login_platforms.Microsoft", "label": "微软" },
+            { "value": "Google", "labelKey": "settings.sso_login_platforms.Google", "label": "谷歌" },
+            { "value": "Dingtalk", "labelKey": "settings.sso_login_platforms.Dingtalk", "label": "钉钉" },
+            { "value": "OIDC", "labelKey": "settings.sso_login_platforms.OIDC", "label": "标准 OIDC" }
+          ]
+        },
+        {
+          "key": "sso_client_id",
+          "type": "text",
+          "labelKey": "settings.sso_client_id",
+          "helpKey": "settings.sso_client_id-tips"
+        },
+        {
+          "key": "sso_client_secret",
+          "type": "password",
+          "labelKey": "settings.sso_client_secret",
+          "helpKey": "settings.sso_client_secret-tips"
+        },
+        {
+          "key": "sso_endpoint_name",
+          "type": "text",
+          "labelKey": "settings.sso_endpoint_name",
+          "helpKey": "settings.sso_endpoint_name-tips"
+        },
+        {
+          "key": "sso_oidc_username_key",
+          "type": "text",
+          "labelKey": "settings.sso_oidc_username_key",
+          "helpKey": "settings.sso_oidc_username_key-tips",
+          "defaultValue": "name"
+        },
+        {
+          "key": "sso_organization_name",
+          "type": "text",
+          "labelKey": "settings.sso_organization_name",
+          "helpKey": "settings.sso_organization_name-tips"
+        },
+        {
+          "key": "sso_application_name",
+          "type": "text",
+          "labelKey": "settings.sso_application_name",
+          "helpKey": "settings.sso_application_name-tips"
+        },
+        {
+          "key": "sso_extra_scopes",
+          "type": "text",
+          "labelKey": "settings.sso_extra_scopes",
+          "helpKey": "settings.sso_extra_scopes-tips"
+        },
+        {
+          "key": "sso_default_dir",
+          "type": "text",
+          "labelKey": "settings.sso_default_dir",
+          "helpKey": "settings.sso_default_dir-tips",
+          "defaultValue": "/"
+        },
+        {
+          "key": "sso_default_permission",
+          "type": "number",
+          "labelKey": "settings.sso_default_permission",
+          "helpKey": "settings.sso_default_permission-tips",
+          "defaultValue": 0
+        },
+        {
+          "key": "sso_auto_register",
+          "type": "switch",
+          "labelKey": "settings.sso_auto_register",
+          "helpKey": "settings.sso_auto_register-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "sso_compatibility_mode",
+          "type": "switch",
+          "labelKey": "settings.sso_compatibility_mode",
+          "helpKey": "settings.sso_compatibility_mode-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "sso_jwt_public_key",
+          "type": "code",
+          "labelKey": "settings.sso_jwt_public_key",
+          "helpKey": "settings.sso_jwt_public_key-tips"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "id": "traffic",
+  "groupNumber": 11,
+  "titleKey": "manage.sidemenu.traffic",
+  "features": {
+    "allowSave": true,
+    "allowRefresh": true,
+    "allowResetDefault": true
+  },
+  "sections": [
+    {
+      "id": "traffic_tasks",
+      "titleKey": "manage.sidemenu.traffic",
+      "fields": [
+        {
+          "key": "offline_download_task_threads_num",
+          "type": "number",
+          "labelKey": "settings.offline_download_task_threads_num",
+          "helpKey": "settings.offline_download_task_threads_num-tips"
+        },
+        {
+          "key": "offline_download_transfer_task_threads_num",
+          "type": "number",
+          "labelKey": "settings.offline_download_transfer_task_threads_num",
+          "helpKey": "settings.offline_download_transfer_task_threads_num-tips"
+        },
+        {
+          "key": "upload_task_threads_num",
+          "type": "number",
+          "labelKey": "settings.upload_task_threads_num",
+          "helpKey": "settings.upload_task_threads_num-tips"
+        },
+        {
+          "key": "copy_task_threads_num",
+          "type": "number",
+          "labelKey": "settings.copy_task_threads_num",
+          "helpKey": "settings.copy_task_threads_num-tips"
+        },
+        {
+          "key": "move_task_threads_num",
+          "type": "number",
+          "labelKey": "settings.move_task_threads_num",
+          "helpKey": "settings.move_task_threads_num-tips"
+        },
+        {
+          "key": "decompress_download_task_threads_num",
+          "type": "number",
+          "labelKey": "settings.decompress_download_task_threads_num",
+          "helpKey": "settings.decompress_download_task_threads_num-tips"
+        },
+        {
+          "key": "decompress_upload_task_threads_num",
+          "type": "number",
+          "labelKey": "settings.decompress_upload_task_threads_num",
+          "helpKey": "settings.decompress_upload_task_threads_num-tips"
+        },
+        {
+          "key": "max_client_download_speed",
+          "type": "number",
+          "labelKey": "settings.max_client_download_speed",
+          "helpKey": "settings.max_client_download_speed-tips"
+        },
+        {
+          "key": "max_client_upload_speed",
+          "type": "number",
+          "labelKey": "settings.max_client_upload_speed",
+          "helpKey": "settings.max_client_upload_speed-tips"
+        },
+        {
+          "key": "max_server_download_speed",
+          "type": "number",
+          "labelKey": "settings.max_server_download_speed",
+          "helpKey": "settings.max_server_download_speed-tips"
+        },
+        {
+          "key": "max_server_upload_speed",
+          "type": "number",
+          "labelKey": "settings.max_server_upload_speed",
+          "helpKey": "settings.max_server_upload_speed-tips"
+        },
+        {
+          "key": "multipart_chunk_size",
+          "type": "number",
+          "labelKey": "settings.multipart_chunk_size",
+          "helpKey": "settings.multipart_chunk_size-tips",
+          "defaultValue": 10
+        },
+        {
+          "key": "multipart_enabled",
+          "type": "switch",
+          "labelKey": "settings.multipart_enabled",
+          "helpKey": "settings.multipart_enabled-tips",
+          "defaultValue": true
+        }
+      ]
+    }
+  ]
+}

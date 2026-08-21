@@ -1,0 +1,169 @@
+import React, { useEffect, useState } from 'react'
+import { r } from '~/utils/request'
+import { User, Resp } from '~/types'
+import { notify } from '~/utils/notify'
+import { useT } from '~/lang'
+import { Users, Trash2, RefreshCw, Loader2, ShieldCheck, User as UserIcon, Plus, Edit3 } from 'lucide-react'
+import { AddOrEditUserModal } from './AddOrEditUserModal'
+
+export const UsersTab: React.FC = () => {
+  const t = useT()
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(false)
+  const [editingUserId, setEditingUserId] = useState<number | null>(null)
+  const [isAddOpen, setIsAddOpen] = useState(false)
+
+  const fetchUsers = async () => {
+    setLoading(true)
+    try {
+      const resp: Resp<{ content: User[]; total: number }> = await r.get('/admin/user/list')
+      if (resp.code === 200 && resp.data) {
+        setUsers(resp.data.content || [])
+      } else {
+        notify.error(resp.message || 'Failed to fetch users')
+      }
+    } catch (e: any) {
+      notify.error(e.message || 'Failed to fetch users')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const handleDelete = async (id: number) => {
+    if (!confirm(t('global.delete_confirm') || 'Are you sure you want to delete this user?')) return
+    try {
+      const resp: Resp<any> = await r.post(`/admin/user/delete?id=${id}`)
+      if (resp.code === 200) {
+        notify.success(t('global.delete_success') || 'User deleted successfully')
+        fetchUsers()
+      } else {
+        notify.error(resp.message || 'Failed to delete user')
+      }
+    } catch (e: any) {
+      notify.error(e.message || 'Failed to delete user')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-bold text-slate-800 dark:text-white">
+            {t('manage.sidemenu.users') || 'User Management'}
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t('users.permission') ? '管理用户访问角色、权限体系与主目录限制' : 'Control user access roles, permissions, and directory restrictions'}
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={fetchUsers}
+            disabled={loading}
+            className="flex items-center space-x-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white cursor-pointer"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>{t('global.refresh') || 'Refresh'}</span>
+          </button>
+
+          <button
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center space-x-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>{t('global.add') || 'Add User'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Users List Table */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden dark:border-slate-800 dark:bg-slate-900">
+        {loading ? (
+          <div className="flex h-48 items-center justify-center space-x-2 text-slate-400">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+            <span className="text-sm">{t('global.loading') || 'Loading users...'}</span>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-slate-400">
+            <Users className="h-10 w-10 text-slate-300 dark:text-slate-700 mb-2 stroke-[1.5]" />
+            <p className="text-sm font-semibold">{t('global.empty') || 'No users found'}</p>
+          </div>
+        ) : (
+          <table className="w-full text-left text-xs">
+            <thead className="border-b border-slate-200/80 bg-slate-50 font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+              <tr>
+                <th className="p-3.5">{t('users.username') || 'User'}</th>
+                <th className="p-3.5">{t('users.role') || 'Role'}</th>
+                <th className="p-3.5">{t('users.base_path') || 'Base Path'}</th>
+                <th className="p-3.5 text-right">{t('global.operations') || 'Actions'}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              {users.map((u) => (
+                <tr key={u.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                  <td className="p-3.5">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-bold uppercase dark:bg-indigo-950 dark:text-indigo-400">
+                        {u.username.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-800 dark:text-slate-200">{u.username}</div>
+                        {u.disabled && (
+                          <span className="text-[10px] text-rose-500 font-semibold">{t('users.disabled') || 'Disabled'}</span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-3.5">
+                    <span className={`inline-flex items-center space-x-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      u.role === 2
+                        ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                    }`}>
+                      {u.role === 2 ? <ShieldCheck className="h-3 w-3 mr-1" /> : <UserIcon className="h-3 w-3 mr-1" />}
+                      <span>{u.role === 2 ? 'Admin' : 'General'}</span>
+                    </span>
+                  </td>
+                  <td className="p-3.5 text-slate-500 font-mono text-[11px]">
+                    {u.base_path || '/'}
+                  </td>
+                  <td className="p-3.5 text-right space-x-1">
+                    <button
+                      onClick={() => setEditingUserId(u.id)}
+                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </button>
+                    {u.id !== 1 && (
+                      <button
+                        onClick={() => handleDelete(u.id)}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <AddOrEditUserModal
+        userId={editingUserId}
+        isOpen={isAddOpen || editingUserId !== null}
+        onClose={() => {
+          setIsAddOpen(false)
+          setEditingUserId(null)
+        }}
+        onSuccess={fetchUsers}
+      />
+    </div>
+  )
+}

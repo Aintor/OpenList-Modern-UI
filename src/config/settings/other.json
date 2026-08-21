@@ -1,0 +1,119 @@
+{
+  "id": "other",
+  "titleKey": "manage.sidemenu.other",
+  "sections": [
+    {
+      "id": "aria2",
+      "titleKey": "settings_other.aria2",
+      "fields": [
+        {
+          "key": "aria2_uri",
+          "type": "text",
+          "labelKey": "settings.aria2_uri",
+          "helpKey": "settings.aria2_uri-tips",
+          "placeholderKey": "http://127.0.0.1:6800/jsonrpc"
+        },
+        {
+          "key": "aria2_secret",
+          "type": "password",
+          "labelKey": "settings.aria2_secret",
+          "helpKey": "settings.aria2_secret-tips"
+        }
+      ]
+    },
+    {
+      "id": "qbittorrent",
+      "titleKey": "settings_other.qbittorrent",
+      "fields": [
+        {
+          "key": "qbittorrent_url",
+          "type": "text",
+          "labelKey": "settings.qbittorrent_url",
+          "helpKey": "settings.qbittorrent_url-tips",
+          "placeholderKey": "http://127.0.0.1:8080"
+        },
+        {
+          "key": "qbittorrent_seedtime",
+          "type": "number",
+          "labelKey": "settings.qbittorrent_seedtime",
+          "helpKey": "settings.qbittorrent_seedtime-tips"
+        }
+      ]
+    },
+    {
+      "id": "transmission",
+      "titleKey": "settings_other.transmission",
+      "fields": [
+        {
+          "key": "transmission_uri",
+          "type": "text",
+          "labelKey": "settings.transmission_uri",
+          "helpKey": "settings.transmission_uri-tips",
+          "placeholderKey": "http://127.0.0.1:9091/transmission/rpc"
+        },
+        {
+          "key": "transmission_seedtime",
+          "type": "number",
+          "labelKey": "settings.transmission_seedtime",
+          "helpKey": "settings.transmission_seedtime-tips"
+        }
+      ]
+    },
+    {
+      "id": "cloud_drives_temp_dir",
+      "titleKey": "settings_other.offline_download_temp_dir",
+      "fields": [
+        {
+          "key": "115_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.115_temp_dir"
+        },
+        {
+          "key": "115_open_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.115_open_temp_dir"
+        },
+        {
+          "key": "123_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.123_temp_dir"
+        },
+        {
+          "key": "123_open_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.123_open_temp_dir"
+        },
+        {
+          "key": "123_open_callback_url",
+          "type": "text",
+          "labelKey": "settings_other.123_open_callback_url"
+        },
+        {
+          "key": "pikpak_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.pikpak_temp_dir"
+        },
+        {
+          "key": "thunder_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.thunder_temp_dir"
+        },
+        {
+          "key": "thunderx_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.thunderx_temp_dir"
+        },
+        {
+          "key": "thunder_browser_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.thunder_browser_temp_dir"
+        },
+        {
+          "key": "guangyapan_temp_dir",
+          "type": "folder",
+          "labelKey": "settings_other.guangyapan_temp_dir"
+        }
+      ]
+    }
+  ]
+}

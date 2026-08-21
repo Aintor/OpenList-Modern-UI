@@ -1,0 +1,146 @@
+{
+  "id": "global",
+  "groupNumber": 4,
+  "titleKey": "manage.sidemenu.global",
+  "features": {
+    "allowSave": true,
+    "allowRefresh": true,
+    "allowResetDefault": true
+  },
+  "sections": [
+    {
+      "id": "global_features",
+      "titleKey": "manage.sidemenu.global",
+      "fields": [
+        {
+          "key": "hide_files",
+          "type": "textarea",
+          "labelKey": "settings.hide_files",
+          "helpKey": "settings.hide_files-tips"
+        },
+        {
+          "key": "privacy_regs",
+          "type": "textarea",
+          "labelKey": "settings.privacy_regs",
+          "helpKey": "settings.privacy_regs-tips"
+        },
+        {
+          "key": "share_summary_content",
+          "type": "textarea",
+          "labelKey": "settings.share_summary_content",
+          "helpKey": "settings.share_summary_content-tips"
+        },
+        {
+          "key": "customize_head",
+          "type": "code",
+          "labelKey": "settings.customize_head",
+          "helpKey": "settings.customize_head-tips"
+        },
+        {
+          "key": "customize_body",
+          "type": "code",
+          "labelKey": "settings.customize_body",
+          "helpKey": "settings.customize_body-tips"
+        },
+        {
+          "key": "ocr_api",
+          "type": "text",
+          "labelKey": "settings.ocr_api",
+          "helpKey": "settings.ocr_api-tips",
+          "defaultValue": "https://openlistteam-ocr-api-server.hf.space/ocr/file/json"
+        },
+        {
+          "key": "filename_char_mapping",
+          "type": "text",
+          "labelKey": "settings.filename_char_mapping",
+          "helpKey": "settings.filename_char_mapping-tips",
+          "defaultValue": "{\"/\" : \"|\"}"
+        },
+        {
+          "key": "ignore_direct_link_params",
+          "type": "text",
+          "labelKey": "settings.ignore_direct_link_params",
+          "helpKey": "settings.ignore_direct_link_params-tips",
+          "defaultValue": "sign,openlist_ts,raw"
+        },
+        {
+          "key": "link_expiration",
+          "type": "number",
+          "labelKey": "settings.link_expiration",
+          "helpKey": "settings.link_expiration-tips",
+          "defaultValue": 0
+        },
+        {
+          "key": "handle_hook_rate_limit",
+          "type": "number",
+          "labelKey": "settings.handle_hook_rate_limit",
+          "helpKey": "settings.handle_hook_rate_limit-tips",
+          "defaultValue": 0
+        },
+        {
+          "key": "package_download",
+          "type": "switch",
+          "labelKey": "settings.package_download",
+          "helpKey": "settings.package_download-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "sign_all",
+          "type": "switch",
+          "labelKey": "settings.sign_all",
+          "helpKey": "settings.sign_all-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "forward_direct_link_params",
+          "type": "switch",
+          "labelKey": "settings.forward_direct_link_params",
+          "helpKey": "settings.forward_direct_link_params-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "webauthn_login_enabled",
+          "type": "switch",
+          "labelKey": "settings.webauthn_login_enabled",
+          "helpKey": "settings.webauthn_login_enabled-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "share_preview",
+          "type": "switch",
+          "labelKey": "settings.share_preview",
+          "helpKey": "settings.share_preview-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "share_archive_preview",
+          "type": "switch",
+          "labelKey": "settings.share_archive_preview",
+          "helpKey": "settings.share_archive_preview-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "share_force_proxy",
+          "type": "switch",
+          "labelKey": "settings.share_force_proxy",
+          "helpKey": "settings.share_force_proxy-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "handle_hook_after_writing",
+          "type": "switch",
+          "labelKey": "settings.handle_hook_after_writing",
+          "helpKey": "settings.handle_hook_after_writing-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "ignore_system_files",
+          "type": "switch",
+          "labelKey": "settings.ignore_system_files",
+          "helpKey": "settings.ignore_system_files-tips",
+          "defaultValue": false
+        }
+      ]
+    }
+  ]
+}

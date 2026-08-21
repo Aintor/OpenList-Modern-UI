@@ -1,0 +1,70 @@
+{
+  "common": {
+    "export": "匯出",
+    "export_title": "匯出儲存為 JSON",
+    "export_tips": "請複製上面的儲存 JSON。",
+    "import": "匯入",
+    "import_title": "從 JSON 匯入儲存",
+    "import_success": "匯入成功！",
+    "import_tips": "貼上匯出的 JSON 儲存以匯入。",
+    "mount_path": "掛載路徑",
+    "mount_path-tips": "要掛載的路徑，必須是唯一且不能重複",
+    "driver": "驅動",
+    "order": "序號",
+    "order-tips": "用於排序",
+    "usage": "使用情況",
+    "status": "狀態",
+    "remark": "備註",
+    "cache_expiration": "快取過期時間",
+    "cache_expiration-tips": "此儲存的快取過期時間（分鐘）",
+    "custom_cache_policies": "自訂快取策略",
+    "custom_cache_policies-tips": "此儲存的快取過期時間（分鐘）",
+    "down_proxy_url": "下載代理網址",
+    "disable_proxy_sign": "禁用代理簽名",
+    "disable_proxy_sign-tips": "禁用下載代理網址的簽名",
+    "web_proxy": "網頁代理",
+    "webdav_policy": "WebDAV 策略",
+    "proxy_range": "代理範圍",
+    "proxy_range-tips": "需要啟用代理",
+    "webdav_policys": {
+      "302_redirect": "302 重定向",
+      "use_proxy_url": "使用代理網址",
+      "native_proxy": "本機代理"
+    },
+    "order_by": "排序依據",
+    "order_by-tips": "檔案列表的預設排序欄位",
+    "order_bys": {
+      "name": "名稱",
+      "size": "大小",
+      "modified": "修改時間"
+    },
+    "order_direction": "排序方式",
+    "order_direction-tips": "檔案排序方向（升序或降序）",
+    "order_directions": {
+      "asc": "升序",
+      "desc": "降序"
+    },
+    "extract_folder": "資料夾順序",
+    "extract_folder-tips": "資料夾在排序結果中的排列位置（置頂或置底）",
+    "extract_folders": {
+      "front": "資料夾置頂",
+      "back": "資料夾置底"
+    },
+    "enable_sign": "啟用簽名",
+    "enable_sign-tips": "是否對此儲存的檔案直鏈強制啟用簽名參數驗證",
+    "disable_index": "禁用索引",
+    "disable_index-tips": "是否對此儲存禁用構建搜尋索引"
+  },
+  "table_fields": {
+    "status": {
+      "work": "工作中",
+      "disabled": "已禁用"
+    }
+  },
+  "other": {
+    "start_load_success": "開始載入",
+    "load_success": "載入成功",
+    "edit_storage": "編輯儲存",
+    "add_storage": "新增儲存"
+  }
+}
