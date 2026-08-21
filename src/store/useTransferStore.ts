@@ -559,20 +559,12 @@ export const useTransferStore = create<TransferState>((set, get) => ({
     const task = get().tasks.find((t) => t.id === id)
     if (!task) return
 
-    if (task.type === 'download' && task.url) {
-      get().removeTask(id)
-      get().addDownloadTask(task.name, task.size, task.url)
-      return
-    }
-
     set((state) => ({
       tasks: state.tasks.map((t) =>
         t.id === id
           ? {
               ...t,
               status: 'pending',
-              progress: 0,
-              loaded: 0,
               speed: 0,
               error: undefined,
             }
@@ -815,6 +807,7 @@ async function executeDownloadTask(task: TransferTask) {
     await downloadWithMultiThread({
       url: task.url,
       filename: task.name,
+      taskId: task.id,
       threadCount: 4,
       signal: abortController.signal,
       onProgress: (p) => {

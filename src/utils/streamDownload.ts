@@ -33,6 +33,7 @@ export interface DownloadProgress {
 export interface MultiThreadDownloadOptions {
   url: string
   filename: string
+  taskId?: string
   threadCount?: number
   onProgress?: (progress: DownloadProgress) => void
   signal?: AbortSignal
@@ -207,10 +208,10 @@ async function downloadSingleStream(
 }
 
 /**
- * Multi-threaded Range Downloader with OPFS per-thread isolation
+ * Multi-threaded Range Downloader with OPFS per-thread isolation, Chunk-level Auto-Retry, and Resumable downloads
  */
 export async function downloadWithMultiThread(options: MultiThreadDownloadOptions): Promise<void> {
-  const { url, filename, threadCount = 4, onProgress, signal } = options
+  const { url, filename, taskId, threadCount = 4, onProgress, signal } = options
 
   // Step 1: Probe Range capability
   onProgress?.({
@@ -250,7 +251,7 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
     })
   }
 
-  // Check OPFS support and create an isolated folder for this task
+  // Check OPFS support and create/open an isolated folder for this task
   const isOpfsSupported =
     typeof navigator !== 'undefined' &&
     'storage' in navigator &&
@@ -258,12 +259,26 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
 
   let rootDir: FileSystemDirectoryHandle | null = null
   let tempDirHandle: FileSystemDirectoryHandle | null = null
-  const tempFolderName = `dl_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  const tempFolderName = taskId
+    ? `dl_task_${taskId.replace(/[^a-zA-Z0-9_-]/g, '_')}`
+    : `dl_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 
   try {
     if (isOpfsSupported) {
       rootDir = await navigator.storage.getDirectory()
       tempDirHandle = await rootDir.getDirectoryHandle(tempFolderName, { create: true })
+
+      // Check for existing part files to support resuming
+      for (const thread of threads) {
+        try {
+          const partFileHandle = await tempDirHandle.getFileHandle(`part_${thread.id}.tmp`)
+          const existingFile = await partFileHandle.getFile()
+          if (existingFile.size > 0) {
+            thread.downloaded = Math.min(existingFile.size, thread.total)
+            thread.percent = Math.min(100, Math.floor((thread.downloaded / thread.total) * 100))
+          }
+        } catch (_) {}
+      }
     }
   } catch (e) {
     console.warn('OPFS directory creation failed, falling back to memory chunks:', e)
@@ -276,7 +291,7 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
     : Array.from({ length: actualThreads }, () => [] as Uint8Array[])
 
   let lastReportTime = Date.now()
-  let lastTotalDownloaded = 0
+  let lastTotalDownloaded = threads.reduce((acc, t) => acc + t.downloaded, 0)
   let currentSpeed = 0
 
   const updateProgress = () => {
@@ -307,91 +322,117 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
     })
   }
 
-  // Launch isolated worker promises for each Range slice
+  // Initial progress update to show existing resumed progress immediately
+  updateProgress()
+
+  // Launch worker promises for each Range slice with chunk-level auto-retry & resume
   const downloadPromises = threads.map(async (thread) => {
-    const rangeHeader = `bytes=${thread.start}-${thread.end}`
-
-    const response = await fetch(url, {
-      headers: { Range: rangeHeader },
-      signal,
-    })
-
-    // Strict check: server MUST return 206 Partial Content
-    if (response.status !== 206) {
-      throw new Error(`Thread ${thread.id} failed: Server returned HTTP ${response.status} instead of 206 Partial Content`)
+    // If this thread was already fully downloaded in previous attempt, skip!
+    if (thread.downloaded >= thread.total) {
+      return
     }
 
-    const reader = response.body?.getReader()
-    if (!reader) {
-      throw new Error(`Thread ${thread.id} stream body unavailable`)
-    }
+    const maxRetries = 3
+    let retryCount = 0
 
-    // Create thread's own independent part file in OPFS
-    let partWritable: any = null
-    if (tempDirHandle) {
+    while (thread.downloaded < thread.total) {
+      if (signal?.aborted) throw new Error('Download canceled')
+
+      let partWritable: any = null
+      let reader: any = null
+
       try {
-        const partFileHandle = await tempDirHandle.getFileHandle(`part_${thread.id}.tmp`, { create: true })
-        partWritable = await partFileHandle.createWritable()
-      } catch (err) {
-        console.warn(`Thread ${thread.id} failed to create OPFS part writable:`, err)
-      }
-    }
-
-    let threadLastTime = Date.now()
-    let threadLastBytes = 0
-
-    try {
-      while (true) {
-        if (signal?.aborted) {
-          if (partWritable) await partWritable.abort()
-          throw new Error('Download canceled')
+        if (tempDirHandle) {
+          const partFileHandle = await tempDirHandle.getFileHandle(`part_${thread.id}.tmp`, { create: true })
+          partWritable = await partFileHandle.createWritable({ keepExistingData: true })
+          if (thread.downloaded > 0) {
+            await partWritable.seek(thread.downloaded)
+          }
         }
 
-        const { done, value } = await reader.read()
-        if (done) break
+        const currentStart = thread.start + thread.downloaded
+        const rangeHeader = `bytes=${currentStart}-${thread.end}`
 
-        if (value) {
-          const chunkLen = value.byteLength
+        const response = await fetch(url, {
+          headers: { Range: rangeHeader },
+          signal,
+        })
 
-          if (partWritable) {
-            // Write sequentially to thread's isolated file (0 race condition!)
-            await partWritable.write(value)
-          } else if (inMemoryBuffers) {
-            inMemoryBuffers[thread.id - 1].push(value)
-          }
-
-          thread.downloaded += chunkLen
-          thread.percent = Math.min(100, Math.floor((thread.downloaded / thread.total) * 100))
-
-          const now = Date.now()
-          const threadDelta = (now - threadLastTime) / 1000
-          if (threadDelta >= 0.4) {
-            thread.speed = (thread.downloaded - threadLastBytes) / threadDelta
-            threadLastBytes = thread.downloaded
-            threadLastTime = now
-          }
-
-          updateProgress()
+        if (response.status !== 206 && response.status !== 200) {
+          throw new Error(`HTTP ${response.status}: Bucket busy or error`)
         }
-      }
 
-      if (partWritable) {
-        await partWritable.close()
+        reader = response.body?.getReader()
+        if (!reader) {
+          throw new Error(`Thread ${thread.id} stream body unavailable`)
+        }
+
+        let threadLastTime = Date.now()
+        let threadLastBytes = thread.downloaded
+
+        while (true) {
+          if (signal?.aborted) {
+            if (partWritable) await partWritable.abort()
+            throw new Error('Download canceled')
+          }
+
+          const { done, value } = await reader.read()
+          if (done) break
+
+          if (value) {
+            const chunkLen = value.byteLength
+
+            if (partWritable) {
+              await partWritable.write(value)
+            } else if (inMemoryBuffers) {
+              inMemoryBuffers[thread.id - 1].push(value)
+            }
+
+            thread.downloaded += chunkLen
+            thread.percent = Math.min(100, Math.floor((thread.downloaded / thread.total) * 100))
+
+            const now = Date.now()
+            const threadDelta = (now - threadLastTime) / 1000
+            if (threadDelta >= 0.4) {
+              thread.speed = (thread.downloaded - threadLastBytes) / threadDelta
+              threadLastBytes = thread.downloaded
+              threadLastTime = now
+            }
+
+            updateProgress()
+          }
+        }
+
+        if (partWritable) {
+          await partWritable.close()
+          partWritable = null
+        }
+
+        if (thread.downloaded >= thread.total) {
+          break // Thread finished completely
+        }
+      } catch (err: any) {
+        if (partWritable) {
+          try {
+            await partWritable.close()
+          } catch (_) {}
+          partWritable = null
+        }
+
+        if (signal?.aborted) throw err
+
+        retryCount++
+        if (retryCount >= maxRetries) {
+          throw new Error(`Thread ${thread.id} failed after ${maxRetries} retries: ${err.message}`)
+        }
+
+        // Exponential backoff before retrying chunk (500ms, 1000ms, 2000ms)
+        await new Promise((resolve) => setTimeout(resolve, 500 * Math.pow(2, retryCount - 1)))
       }
-    } catch (err) {
-      if (partWritable) {
-        try {
-          await partWritable.abort()
-        } catch (_) {}
-      }
-      throw err
     }
-
-    thread.percent = 100
-    thread.downloaded = thread.total
   })
 
-  // Await all thread chunks to finish downloading
+  // Wait for all thread slices to finish
   await Promise.all(downloadPromises)
 
   // Step 3: Finalize & Assemble ordered Blob
