@@ -61,7 +61,8 @@ export const useDownload = () => {
       return
     }
 
-    useTransferStore.getState().addDownloadTask(obj.name, obj.size || 0, url)
+    const fullPath = path === '/' ? `/${obj.name}` : `${path}/${obj.name}`
+    useTransferStore.getState().addDownloadTask(obj.name, obj.size || 0, url, fullPath)
   }
 
   const batchDownload = async (objs: Obj[], customPath?: string) => {
@@ -77,15 +78,17 @@ export const useDownload = () => {
       `Batch downloading ${files.length} file(s)...`
     )
 
-    const taskItems: Array<{ name: string; size: number; url: string }> = []
+    const taskItems: Array<{ name: string; size: number; url: string; targetPath?: string }> = []
     await Promise.all(
       files.map(async (file) => {
+        const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`
         const url = await resolveDownloadUrl(file, path)
         if (url) {
           taskItems.push({
             name: file.name,
             size: file.size || 0,
             url,
+            targetPath: fullPath,
           })
         }
       })

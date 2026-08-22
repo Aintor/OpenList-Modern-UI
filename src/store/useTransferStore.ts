@@ -1,10 +1,16 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import axios, { CancelTokenSource } from 'axios'
 import { downloadZip } from 'client-zip'
-import { fsStreamUpload, fsFormUpload, fsList } from '~/utils/api'
+import { fsStreamUpload, fsFormUpload, fsList, fsGet } from '~/utils/api'
 import { getDownloadUrl } from '~/utils/link'
 import { useObjStore } from './useObjStore'
-import { downloadWithMultiThread } from '~/utils/streamDownload'
+import {
+  downloadWithMultiThread,
+  readWithTimeout,
+  deleteOpfsTaskFolder,
+  cleanupOpfsTempFiles,
+} from '~/utils/streamDownload'
 import { Obj } from '~/types'
 
 export type TransferType = 'upload' | 'download' | 'package'
@@ -14,6 +20,7 @@ export type TransferStatus =
   | 'uploading'
   | 'downloading'
   | 'processing'
+  | 'paused'
   | 'success'
   | 'error'
   | 'canceled'
@@ -43,6 +50,7 @@ export interface TransferTask {
   loaded: number
   speed: number // bytes per second
   error?: string
+  createdAt?: number
   // Upload specific
   file?: File
   cancelSource?: CancelTokenSource
@@ -51,9 +59,10 @@ export interface TransferTask {
   abortController?: AbortController
   // Package specific
   subFiles?: PackageSubFile[]
-  phase?: 'scanning' | 'downloading' | 'packaging' | 'success' | 'error' | 'canceled'
+  phase?: 'scanning' | 'downloading' | 'packaging' | 'success' | 'error' | 'canceled' | 'paused'
   completedFilesCount?: number
   totalFilesCount?: number
+  targets?: Obj[]
 }
 
 interface TransferState {
@@ -64,9 +73,13 @@ interface TransferState {
   maxDownloadConcurrency: number
 
   addUploadFiles: (files: File[], targetDir: string, password?: string) => void
-  addDownloadTask: (name: string, size: number, url: string) => void
-  addDownloadTasks: (items: Array<{ name: string; size: number; url: string }>) => void
+  addDownloadTask: (name: string, size: number, url: string, targetPath?: string) => void
+  addDownloadTasks: (items: Array<{ name: string; size: number; url: string; targetPath?: string }>) => void
   addPackageTask: (targets: Obj[], currentPath?: string, password?: string) => Promise<void>
+  pauseTask: (id: string) => void
+  resumeTask: (id: string) => void
+  pauseAll: () => void
+  resumeAll: () => void
   cancelTask: (id: string) => void
   removeTask: (id: string) => void
   retryTask: (id: string) => void
@@ -82,122 +95,402 @@ interface TransferState {
 
 let isProcessingUpload = false
 let isProcessingDownload = false
+let isProcessingPackage = false
 
-export const useTransferStore = create<TransferState>((set, get) => ({
-  tasks: [],
-  isOpen: false,
-  isMinimized: false,
-  maxConcurrency: 2,
-  maxDownloadConcurrency: 3,
+function getSafeSubFileId(index: number, path: string): string {
+  let hash = 0
+  for (let i = 0; i < path.length; i++) {
+    hash = (hash << 5) - hash + path.charCodeAt(i)
+    hash |= 0
+  }
+  return `sf_${index}_${Math.abs(hash).toString(36)}`
+}
 
-  addUploadFiles: (files, targetDir, password = '') => {
-    if (!files.length) return
-
-    const normalizedDir = targetDir.endsWith('/') ? targetDir : targetDir + '/'
-    const newTasks: TransferTask[] = files.map((file) => {
-      const id = `up-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-      const targetPath = normalizedDir === '/' ? `/${file.name}` : `${normalizedDir}${file.name}`
-
-      return {
-        id,
-        type: 'upload',
-        file,
-        name: file.name,
-        size: file.size,
-        targetDir,
-        targetPath,
-        password,
-        status: 'pending',
-        progress: 0,
-        loaded: 0,
-        speed: 0,
-      }
-    })
-
-    set((state) => ({
-      tasks: [...state.tasks, ...newTasks],
-      isOpen: true,
+export const useTransferStore = create<TransferState>()(
+  persist(
+    (set, get) => ({
+      tasks: [],
+      isOpen: false,
       isMinimized: false,
-    }))
+      maxConcurrency: 2,
+      maxDownloadConcurrency: 3,
 
-    processUploadQueue()
-  },
+      addUploadFiles: (files, targetDir, password = '') => {
+        if (!files.length) return
 
-  addDownloadTask: (name: string, size: number, url: string) => {
-    get().addDownloadTasks([{ name, size, url }])
-  },
+        const normalizedDir = targetDir.endsWith('/') ? targetDir : targetDir + '/'
+        const newTasks: TransferTask[] = files.map((file) => {
+          const id = `up-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+          const targetPath = normalizedDir === '/' ? `/${file.name}` : `${normalizedDir}${file.name}`
 
-  addDownloadTasks: (items: Array<{ name: string; size: number; url: string }>) => {
-    if (!items.length) return
+          return {
+            id,
+            type: 'upload',
+            file,
+            name: file.name,
+            size: file.size,
+            targetDir,
+            targetPath,
+            password,
+            status: 'pending',
+            progress: 0,
+            loaded: 0,
+            speed: 0,
+            createdAt: Date.now(),
+          }
+        })
 
-    const newTasks: TransferTask[] = items.map((item) => ({
-      id: `dl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      type: 'download',
-      name: item.name,
-      size: item.size,
-      url: item.url,
-      status: 'pending',
-      progress: 0,
-      loaded: 0,
-      speed: 0,
-    }))
+        set((state) => ({
+          tasks: [...state.tasks, ...newTasks],
+          isOpen: true,
+          isMinimized: false,
+        }))
 
-    set((state) => ({
-      tasks: [...state.tasks, ...newTasks],
-      isOpen: true,
-      isMinimized: false,
-    }))
+        processUploadQueue()
+      },
 
-    processDownloadQueue()
-  },
+      addDownloadTask: (name: string, size: number, url: string, targetPath?: string) => {
+        get().addDownloadTasks([{ name, size, url, targetPath }])
+      },
 
-  addPackageTask: async (targets: Obj[], currentPath: string = '/', password = '') => {
-    if (!targets.length) return
+      addDownloadTasks: (items: Array<{ name: string; size: number; url: string; targetPath?: string }>) => {
+        if (!items.length) return
 
-    const archiveName =
-      targets.length === 1
-        ? `${targets[0].name}.zip`
-        : `${currentPath.replace(/\/+$/, '').split('/').pop() || 'archive'}.zip`
+        const newTasks: TransferTask[] = items.map((item) => ({
+          id: `dl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          type: 'download',
+          name: item.name,
+          size: item.size,
+          url: item.url,
+          targetPath: item.targetPath,
+          status: 'pending',
+          progress: 0,
+          loaded: 0,
+          speed: 0,
+          createdAt: Date.now(),
+        }))
 
-    const id = `pkg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    const abortController = new AbortController()
+        set((state) => ({
+          tasks: [...state.tasks, ...newTasks],
+          isOpen: true,
+          isMinimized: false,
+        }))
 
-    const newTask: TransferTask = {
-      id,
-      type: 'package',
-      name: archiveName,
-      size: 0,
-      status: 'processing',
-      phase: 'scanning',
-      progress: 0,
-      loaded: 0,
-      speed: 0,
-      abortController,
-      subFiles: [],
-      completedFilesCount: 0,
-      totalFilesCount: 0,
+        processDownloadQueue()
+      },
+
+      addPackageTask: async (targets: Obj[], currentPath: string = '/', password = '') => {
+        if (!targets.length) return
+
+        const archiveName =
+          targets.length === 1
+            ? `${targets[0].name}.zip`
+            : `${currentPath.replace(/\/+$/, '').split('/').pop() || 'archive'}.zip`
+
+        const id = `pkg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+
+        const newTask: TransferTask = {
+          id,
+          type: 'package',
+          name: archiveName,
+          size: 0,
+          targetDir: currentPath,
+          password,
+          targets,
+          status: 'pending',
+          phase: 'scanning',
+          progress: 0,
+          loaded: 0,
+          speed: 0,
+          subFiles: [],
+          completedFilesCount: 0,
+          totalFilesCount: 0,
+          createdAt: Date.now(),
+        }
+
+        set((state) => ({
+          tasks: [...state.tasks, newTask],
+          isOpen: true,
+          isMinimized: false,
+        }))
+
+        processPackageQueue()
+      },
+
+      pauseTask: (id) => {
+        const task = get().tasks.find((t) => t.id === id)
+        if (task) {
+          if (task.cancelSource) {
+            task.cancelSource.cancel('Paused by user')
+          }
+          if (task.abortController) {
+            task.abortController.abort()
+          }
+        }
+
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  status: 'paused',
+                  phase: t.type === 'package' ? 'paused' : t.phase,
+                  speed: 0,
+                  subFiles: t.subFiles?.map((sf) =>
+                    sf.status === 'downloading' ? { ...sf, status: 'pending' } : sf
+                  ),
+                }
+              : t
+          ),
+        }))
+
+        processUploadQueue()
+        processDownloadQueue()
+        processPackageQueue()
+      },
+
+      resumeTask: (id) => {
+        const task = get().tasks.find((t) => t.id === id)
+        if (!task) return
+
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  status: 'pending',
+                  phase: t.type === 'package' ? (t.subFiles && t.subFiles.length > 0 ? 'downloading' : 'scanning') : t.phase,
+                  speed: 0,
+                  error: undefined,
+                }
+              : t
+          ),
+        }))
+
+        if (task.type === 'upload') processUploadQueue()
+        else if (task.type === 'download') processDownloadQueue()
+        else if (task.type === 'package') processPackageQueue()
+      },
+
+      pauseAll: () => {
+        const activeTasks = get().tasks.filter(
+          (t) =>
+            t.status === 'downloading' ||
+            t.status === 'uploading' ||
+            t.status === 'processing' ||
+            t.status === 'pending'
+        )
+        activeTasks.forEach((t) => get().pauseTask(t.id))
+      },
+
+      resumeAll: () => {
+        const pausedTasks = get().tasks.filter(
+          (t) => t.status === 'paused' || t.status === 'error' || t.status === 'canceled'
+        )
+        pausedTasks.forEach((t) => get().resumeTask(t.id))
+      },
+
+      retryTask: (id) => {
+        get().resumeTask(id)
+      },
+
+      cancelTask: (id) => {
+        const task = get().tasks.find((t) => t.id === id)
+        if (task) {
+          if (task.cancelSource) {
+            task.cancelSource.cancel('User cancelled')
+          }
+          if (task.abortController) {
+            task.abortController.abort()
+          }
+        }
+
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  status: 'canceled',
+                  phase: 'canceled',
+                  speed: 0,
+                  subFiles: t.subFiles?.map((sf) =>
+                    sf.status === 'downloading' ? { ...sf, status: 'pending' } : sf
+                  ),
+                }
+              : t
+          ),
+        }))
+
+        processUploadQueue()
+        processDownloadQueue()
+        processPackageQueue()
+      },
+
+      removeTask: (id) => {
+        get().cancelTask(id)
+        set((state) => ({
+          tasks: state.tasks.filter((t) => t.id !== id),
+        }))
+        deleteOpfsTaskFolder(`dl_task_${id}`)
+        deleteOpfsTaskFolder(`pkg_task_${id}`)
+      },
+
+      clearCompleted: () => {
+        set((state) => ({
+          tasks: state.tasks.filter(
+            (t) => t.status !== 'success' && t.status !== 'canceled'
+          ),
+        }))
+      },
+
+      toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
+      setOpen: (isOpen) => set({ isOpen }),
+      toggleMinimized: () => set((state) => ({ isMinimized: !state.isMinimized })),
+      setMinimized: (isMinimized) => set({ isMinimized }),
+
+      // Alias for backward compatibility
+      addFiles: (files, targetDir, password) =>
+        get().addUploadFiles(files, targetDir, password),
+    }),
+    {
+      name: 'openlist_transfers_v2',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        tasks: state.tasks.map((t) => {
+          const { file, cancelSource, abortController, ...rest } = t
+          const restoredStatus: TransferStatus =
+            t.status === 'downloading' ||
+            t.status === 'processing' ||
+            t.status === 'uploading'
+              ? 'paused'
+              : t.status
+
+          const restoredSubFiles = t.subFiles?.map((sf) =>
+            sf.status === 'downloading' ? { ...sf, status: 'pending' as const } : sf
+          )
+
+          return {
+            ...rest,
+            status: restoredStatus,
+            phase:
+              t.type === 'package' &&
+              (t.phase === 'downloading' || t.phase === 'scanning' || t.phase === 'packaging')
+                ? 'paused'
+                : t.phase,
+            subFiles: restoredSubFiles,
+            speed: 0,
+          }
+        }),
+        isOpen: state.isOpen || state.tasks.length > 0,
+        isMinimized: state.isMinimized,
+      }),
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state && state.tasks && state.tasks.length > 0) {
+            // Auto open transfer window if there are active / paused tasks
+            useTransferStore.setState({
+              isOpen: true,
+            })
+            // Clean up old temporary files excluding currently active tasks
+            const activeFolderNames = new Set(
+              state.tasks.flatMap((t) => [`dl_task_${t.id}`, `pkg_task_${t.id}`])
+            )
+            cleanupOpfsTempFiles(24 * 60 * 60 * 1000, activeFolderNames)
+          } else {
+            cleanupOpfsTempFiles()
+          }
+        }
+      },
+    }
+  )
+)
+
+// Export alias
+export const useUploadStore = useTransferStore
+
+/**
+ * Worker queue processing package tasks
+ */
+async function processPackageQueue() {
+  if (isProcessingPackage) return
+  isProcessingPackage = true
+
+  try {
+    const store = useTransferStore.getState()
+    const activePackages = store.tasks.filter(
+      (t) => t.type === 'package' && (t.status === 'downloading' || t.status === 'processing')
+    )
+
+    if (activePackages.length >= 1) {
+      isProcessingPackage = false
+      return
     }
 
-    set((state) => ({
-      tasks: [...state.tasks, newTask],
-      isOpen: true,
-      isMinimized: false,
-    }))
+    const pendingTask = store.tasks.find((t) => t.type === 'package' && t.status === 'pending')
+    if (!pendingTask) {
+      isProcessingPackage = false
+      return
+    }
 
-    try {
-      // 1. Recursive folder traversal
+    await executePackageTask(pendingTask)
+  } finally {
+    isProcessingPackage = false
+  }
+}
+
+async function executePackageTask(task: TransferTask) {
+  const id = task.id
+  const abortController = new AbortController()
+
+  useTransferStore.setState((state) => ({
+    tasks: state.tasks.map((t) =>
+      t.id === id ? { ...t, abortController, status: 'downloading', error: undefined } : t
+    ),
+  }))
+
+  const isOpfsSupported =
+    typeof navigator !== 'undefined' &&
+    'storage' in navigator &&
+    typeof navigator.storage?.getDirectory === 'function'
+
+  let rootDir: FileSystemDirectoryHandle | null = null
+  let tempPkgDir: FileSystemDirectoryHandle | null = null
+  const tempFolderName = `pkg_task_${id}`
+  const memoryBlobs = new Map<string, Blob>()
+
+  try {
+    if (isOpfsSupported) {
+      try {
+        rootDir = await navigator.storage.getDirectory()
+        tempPkgDir = await rootDir.getDirectoryHandle(tempFolderName, { create: true })
+      } catch (_) {}
+    }
+
+    let currentSubFiles: PackageSubFile[] = task.subFiles && task.subFiles.length > 0 ? [...task.subFiles] : []
+    let totalSize = task.size || 0
+
+    // 1. If subFiles not yet collected (first time run), traverse folder!
+    if (currentSubFiles.length === 0) {
+      useTransferStore.setState((state) => ({
+        tasks: state.tasks.map((t) =>
+          t.id === id ? { ...t, phase: 'scanning', status: 'processing' } : t
+        ),
+      }))
+
+      const currentPath = task.targetDir || '/'
+      const password = task.password || ''
+      const targets = task.targets || []
       const collected: PackageSubFile[] = []
-      let totalSize = 0
 
       const traverse = async (subDir: string, obj: Obj): Promise<void> => {
         if (abortController.signal.aborted) return
-
         const activeFolder = subDir ? `${currentPath.replace(/\/$/, '')}/${subDir}` : currentPath
 
         if (!obj.is_dir) {
           const relativePath = subDir ? `${subDir}/${obj.name}` : obj.name
+          const sfId = getSafeSubFileId(collected.length, relativePath)
           collected.push({
-            id: `f-${collected.length}-${Math.random().toString(36).slice(2, 5)}`,
+            id: sfId,
             name: obj.name,
             path: relativePath,
             size: obj.size || 0,
@@ -230,372 +523,366 @@ export const useTransferStore = create<TransferState>((set, get) => ({
         throw new Error('未找到可打包的文件')
       }
 
-      // Initialize OPFS sandbox directory
-      const isOpfsSupported =
-        typeof navigator !== 'undefined' &&
-        'storage' in navigator &&
-        typeof navigator.storage?.getDirectory === 'function'
+      currentSubFiles = collected
+    }
 
-      let rootDir: FileSystemDirectoryHandle | null = null
-      let tempPkgDir: FileSystemDirectoryHandle | null = null
-      const tempFolderName = `pkg_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
-      const memoryBlobs = new Map<string, Blob>()
+    // Check OPFS disk for already completed subfiles (for resuming / pause resume)
+    let alreadyCompletedCount = 0
+    let initialDownloadedBytes = 0
 
-      if (isOpfsSupported) {
+    if (tempPkgDir) {
+      for (let i = 0; i < currentSubFiles.length; i++) {
+        const sf = currentSubFiles[i]
         try {
-          rootDir = await navigator.storage.getDirectory()
-          tempPkgDir = await rootDir.getDirectoryHandle(tempFolderName, { create: true })
+          const sfHandle = await tempPkgDir.getFileHandle(sf.id)
+          const existingFile = await sfHandle.getFile()
+          if (existingFile.size >= sf.size && sf.size > 0) {
+            currentSubFiles[i] = { ...sf, status: 'success', progress: 100 }
+            alreadyCompletedCount++
+            initialDownloadedBytes += sf.size
+          } else if (sf.size === 0) {
+            currentSubFiles[i] = { ...sf, status: 'success', progress: 100 }
+            alreadyCompletedCount++
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Update task in store with subFiles & progress
+    const initialOverallProgress =
+      totalSize > 0 ? Math.min(99, Math.round((initialDownloadedBytes / totalSize) * 100)) : 0
+
+    useTransferStore.setState((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              size: totalSize,
+              totalFilesCount: currentSubFiles.length,
+              completedFilesCount: alreadyCompletedCount,
+              loaded: initialDownloadedBytes,
+              progress: initialOverallProgress,
+              subFiles: [...currentSubFiles],
+              phase: 'downloading',
+              status: 'downloading',
+            }
+          : t
+      ),
+    }))
+
+    // Write/update manifest.json
+    if (tempPkgDir) {
+      try {
+        const manifestHandle = await tempPkgDir.getFileHandle('manifest.json', { create: true })
+        const writable = await manifestHandle.createWritable()
+        await writable.write(
+          JSON.stringify({
+            id,
+            name: task.name,
+            totalSize,
+            createdAt: task.createdAt || Date.now(),
+            filesCount: currentSubFiles.length,
+          })
+        )
+        await writable.close()
+      } catch (_) {}
+    }
+
+    let downloadedBytesTotal = initialDownloadedBytes
+    let lastTime = Date.now()
+    let lastBytes = downloadedBytesTotal
+
+    // Direct stream fetcher with dynamic refresh
+    const fetchFileStream = async (file: PackageSubFile): Promise<Response> => {
+      let fetchUrl = file.directUrl || ''
+      let response = await fetch(fetchUrl, { signal: abortController.signal })
+
+      // If 403 or 401 or link expired, attempt refresh via /api/fs/get
+      if ((response.status === 403 || response.status === 401) && task.targetDir) {
+        try {
+          const activeFolder = task.targetDir.replace(/\/$/, '')
+          const fullPath = activeFolder === '/' ? `/${file.name}` : `${activeFolder}/${file.path}`
+          const getRes = await fsGet(fullPath, task.password)
+          if (getRes.code === 200 && getRes.data?.raw_url) {
+            fetchUrl = getRes.data.raw_url
+            response = await fetch(fetchUrl, { signal: abortController.signal })
+          }
         } catch (_) {}
       }
 
-      // Update task with discovered subFiles
-      set((state) => ({
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${file.name}`)
+      return response
+    }
+
+    // Download single subfile with watchdog timeout and retry
+    const downloadSubFile = async (file: PackageSubFile) => {
+      if (abortController.signal.aborted) return
+      if (file.status === 'success') return
+
+      // Mark subfile as downloading
+      useTransferStore.setState((state) => ({
         tasks: state.tasks.map((t) =>
-          t.id === id
+          t.id === id && t.subFiles
             ? {
                 ...t,
-                size: totalSize,
-                totalFilesCount: collected.length,
-                subFiles: [...collected],
-                phase: 'downloading',
-                status: 'downloading',
+                subFiles: t.subFiles.map((sf) =>
+                  sf.id === file.id ? { ...sf, status: 'downloading' } : sf
+                ),
               }
             : t
         ),
       }))
 
-      let downloadedBytesTotal = 0
-      let lastTime = Date.now()
-      let lastBytes = 0
+      const maxRetries = 5
+      let retryCount = 0
 
-      // Direct stream fetcher
-      const fetchFileStream = async (file: PackageSubFile): Promise<Response> => {
-        const fetchUrl = file.directUrl || ''
-        const response = await fetch(fetchUrl, { signal: abortController.signal })
-        if (!response.ok) throw new Error(`HTTP ${response.status}: ${file.name}`)
-        return response
-      }
-
-      // Worker downloading a single subfile directly to OPFS sandbox
-      const downloadSubFile = async (file: PackageSubFile) => {
-        if (abortController.signal.aborted) return
-
-        // Mark this specific subfile as downloading
-        set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id && t.subFiles
-              ? {
-                  ...t,
-                  subFiles: t.subFiles.map((sf) =>
-                    sf.id === file.id ? { ...sf, status: 'downloading' } : sf
-                  ),
-                }
-              : t
-          ),
-        }))
-
-        const response = await fetchFileStream(file)
-        let fileLoadedBytes = 0
+      while (retryCount < maxRetries) {
+        if (abortController.signal.aborted) throw new Error('Packaging canceled')
 
         let opfsWritable: any = null
-        if (tempPkgDir) {
-          try {
+
+        try {
+          if (tempPkgDir) {
             const fileHandle = await tempPkgDir.getFileHandle(file.id, { create: true })
             opfsWritable = await fileHandle.createWritable()
-          } catch (_) {}
-        }
+          }
 
-        if (response.body) {
-          const reader = response.body.getReader()
-          const memoryChunks: Uint8Array[] = []
+          const response = await fetchFileStream(file)
+          let fileLoadedBytes = 0
 
-          while (true) {
-            if (abortController.signal.aborted) {
-              if (opfsWritable) await opfsWritable.abort()
-              throw new Error('Packaging canceled')
+          if (response.body) {
+            const reader = response.body.getReader()
+            const memoryChunks: Uint8Array[] = []
+
+            while (true) {
+              if (abortController.signal.aborted) {
+                if (opfsWritable) await opfsWritable.abort()
+                throw new Error('Packaging canceled')
+              }
+
+              const { done, value } = await readWithTimeout(reader, 15000)
+              if (done) break
+
+              if (value) {
+                if (opfsWritable) {
+                  await opfsWritable.write(value)
+                } else {
+                  memoryChunks.push(value)
+                }
+
+                fileLoadedBytes += value.byteLength
+                downloadedBytesTotal += value.byteLength
+
+                const now = Date.now()
+                const timeDelta = (now - lastTime) / 1000
+                let currentSpeed = 0
+                if (timeDelta >= 0.4) {
+                  currentSpeed = Math.max(0, (downloadedBytesTotal - lastBytes) / timeDelta)
+                  lastBytes = downloadedBytesTotal
+                  lastTime = now
+                }
+
+                const overallProgress =
+                  totalSize > 0
+                    ? Math.min(99, Math.round((downloadedBytesTotal / totalSize) * 100))
+                    : 0
+                const fileProgress =
+                  file.size > 0
+                    ? Math.min(99, Math.round((fileLoadedBytes / file.size) * 100))
+                    : 100
+
+                useTransferStore.setState((state) => ({
+                  tasks: state.tasks.map((t) =>
+                    t.id === id
+                      ? {
+                          ...t,
+                          loaded: downloadedBytesTotal,
+                          progress: overallProgress,
+                          speed: currentSpeed > 0 ? currentSpeed : t.speed,
+                          subFiles: t.subFiles?.map((sf) =>
+                            sf.id === file.id
+                              ? { ...sf, progress: fileProgress }
+                              : sf
+                          ),
+                        }
+                      : t
+                  ),
+                }))
+              }
             }
 
-            const { done, value } = await reader.read()
-            if (done) break
-
-            if (value) {
-              if (opfsWritable) {
-                await opfsWritable.write(value)
-              } else {
-                memoryChunks.push(value)
-              }
-
-              fileLoadedBytes += value.byteLength
-              downloadedBytesTotal += value.byteLength
-
-              const now = Date.now()
-              const timeDelta = (now - lastTime) / 1000
-              let currentSpeed = 0
-              if (timeDelta >= 0.4) {
-                currentSpeed = Math.max(0, (downloadedBytesTotal - lastBytes) / timeDelta)
-                lastBytes = downloadedBytesTotal
-                lastTime = now
-              }
-
-              const overallProgress = Math.min(
-                99,
-                Math.round((downloadedBytesTotal / (totalSize || 1)) * 100)
-              )
-              const fileProgress = Math.min(
-                99,
-                Math.round((fileLoadedBytes / (file.size || 1)) * 100)
-              )
-
-              set((state) => ({
-                tasks: state.tasks.map((t) =>
-                  t.id === id
-                    ? {
-                        ...t,
-                        loaded: downloadedBytesTotal,
-                        progress: overallProgress,
-                        speed: currentSpeed > 0 ? currentSpeed : t.speed,
-                        subFiles: t.subFiles?.map((sf) =>
-                          sf.id === file.id
-                            ? { ...sf, progress: fileProgress }
-                            : sf
-                        ),
-                      }
-                    : t
-                ),
-              }))
+            if (opfsWritable) {
+              await opfsWritable.close()
+            } else {
+              const blob = new Blob(memoryChunks as unknown as BlobPart[])
+              memoryBlobs.set(file.id, blob)
+            }
+          } else {
+            const blob = await response.blob()
+            downloadedBytesTotal += file.size
+            if (opfsWritable) {
+              await opfsWritable.write(blob)
+              await opfsWritable.close()
+            } else {
+              memoryBlobs.set(file.id, blob)
             }
           }
 
+          // Mark completed subfile as success
+          useTransferStore.setState((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === id
+                ? {
+                    ...t,
+                    completedFilesCount: (t.completedFilesCount || 0) + 1,
+                    subFiles: t.subFiles?.map((sf) =>
+                      sf.id === file.id
+                        ? { ...sf, status: 'success', progress: 100 }
+                        : sf
+                    ),
+                  }
+                : t
+            ),
+          }))
+
+          return // Finished subfile successfully
+        } catch (err: any) {
           if (opfsWritable) {
-            await opfsWritable.close()
-          } else {
-            const blob = new Blob(memoryChunks as unknown as BlobPart[])
-            memoryBlobs.set(file.id, blob)
+            try {
+              await opfsWritable.close()
+            } catch (_) {}
+          }
+          if (abortController.signal.aborted) throw err
+
+          retryCount++
+          if (retryCount >= maxRetries) {
+            throw new Error(`Subfile ${file.name} failed after ${maxRetries} retries: ${err.message}`)
+          }
+
+          const delayMs = Math.round(1000 * Math.pow(1.8, retryCount - 1))
+          await new Promise((r) => setTimeout(r, delayMs))
+        }
+      }
+    }
+
+    // Concurrently run 3 workers to download remaining subfiles
+    const pendingFiles = currentSubFiles.filter((f) => f.status !== 'success')
+    const CONCURRENCY = Math.min(3, Math.max(1, pendingFiles.length))
+    let fileCursor = 0
+
+    const worker = async () => {
+      while (fileCursor < pendingFiles.length) {
+        if (abortController.signal.aborted) return
+        const currentIndex = fileCursor++
+        const file = pendingFiles[currentIndex]
+        await downloadSubFile(file)
+      }
+    }
+
+    const workers = Array.from({ length: CONCURRENCY }, () => worker())
+    await Promise.all(workers)
+
+    if (abortController.signal.aborted) return
+
+    // All subfiles downloaded locally, now start instant local packaging!
+    useTransferStore.setState((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === id ? { ...t, phase: 'packaging', status: 'processing', speed: 0 } : t
+      ),
+    }))
+
+    async function* generateLocalZipEntries() {
+      for (const file of currentSubFiles) {
+        if (tempPkgDir) {
+          const handle = await tempPkgDir.getFileHandle(file.id)
+          const fileBlob = await handle.getFile()
+          yield {
+            name: file.path,
+            input: fileBlob,
+            lastModified: file.modified ? new Date(file.modified) : new Date(),
           }
         } else {
-          const blob = await response.blob()
-          downloadedBytesTotal += file.size
-          if (opfsWritable) {
-            await opfsWritable.write(blob)
-            await opfsWritable.close()
-          } else {
-            memoryBlobs.set(file.id, blob)
-          }
-        }
-
-        // Mark completed subfile as success
-        set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  completedFilesCount: (t.completedFilesCount || 0) + 1,
-                  subFiles: t.subFiles?.map((sf) =>
-                    sf.id === file.id
-                      ? { ...sf, status: 'success', progress: 100 }
-                      : sf
-                  ),
-                }
-              : t
-          ),
-        }))
-      }
-
-      // Concurrently run 3 workers to download all subfiles in parallel
-      const CONCURRENCY = Math.min(3, collected.length)
-      let fileCursor = 0
-
-      const worker = async () => {
-        while (fileCursor < collected.length) {
-          if (abortController.signal.aborted) return
-          const currentIndex = fileCursor++
-          const file = collected[currentIndex]
-          await downloadSubFile(file)
-        }
-      }
-
-      const workers = Array.from({ length: CONCURRENCY }, () => worker())
-      await Promise.all(workers)
-
-      if (abortController.signal.aborted) return
-
-      // All subfiles downloaded locally, now start instant local packaging!
-      set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === id ? { ...t, phase: 'packaging', status: 'processing', speed: 0 } : t
-        ),
-      }))
-
-      async function* generateLocalZipEntries() {
-        for (const file of collected) {
-          if (tempPkgDir) {
-            const handle = await tempPkgDir.getFileHandle(file.id)
-            const fileBlob = await handle.getFile()
-            yield {
-              name: file.path,
-              input: fileBlob,
-              lastModified: file.modified ? new Date(file.modified) : new Date(),
-            }
-          } else {
-            const fileBlob = memoryBlobs.get(file.id) || new Blob([])
-            yield {
-              name: file.path,
-              input: fileBlob,
-              lastModified: file.modified ? new Date(file.modified) : new Date(),
-            }
+          const fileBlob = memoryBlobs.get(file.id) || new Blob([])
+          yield {
+            name: file.path,
+            input: fileBlob,
+            lastModified: file.modified ? new Date(file.modified) : new Date(),
           }
         }
       }
+    }
 
-      const zipResponse = downloadZip(generateLocalZipEntries())
-      const zipBlob = await zipResponse.blob()
+    const zipResponse = downloadZip(generateLocalZipEntries())
+    const zipBlob = await zipResponse.blob()
 
-      if (abortController.signal.aborted) return
+    if (abortController.signal.aborted) return
 
-      // Save ZIP file to disk
-      const blobUrl = URL.createObjectURL(zipBlob)
-      const a = document.createElement('a')
-      a.href = blobUrl
-      a.download = archiveName
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
+    // Save ZIP file to disk
+    const blobUrl = URL.createObjectURL(zipBlob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = task.name
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
 
-      // Clean up OPFS temporary folder
-      if (rootDir) {
-        try {
-          await rootDir.removeEntry(tempFolderName, { recursive: true })
-        } catch (_) {}
-      }
+    // Clean up OPFS temporary folder after successful packaging
+    if (rootDir) {
+      try {
+        await rootDir.removeEntry(tempFolderName, { recursive: true })
+      } catch (_) {}
+    }
 
-      set((state) => ({
+    useTransferStore.setState((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              status: 'success',
+              phase: 'success',
+              progress: 100,
+              speed: 0,
+            }
+          : t
+      ),
+    }))
+  } catch (err: any) {
+    if (abortController.signal.aborted) {
+      useTransferStore.setState((state) => ({
         tasks: state.tasks.map((t) =>
           t.id === id
             ? {
                 ...t,
-                status: 'success',
-                phase: 'success',
-                progress: 100,
+                status: t.status === 'paused' ? 'paused' : 'canceled',
+                phase: t.status === 'paused' ? 'paused' : 'canceled',
                 speed: 0,
+                subFiles: t.subFiles?.map((sf) =>
+                  sf.status === 'downloading' ? { ...sf, status: 'pending' } : sf
+                ),
               }
             : t
         ),
       }))
-    } catch (err: any) {
-      if (abortController.signal.aborted) {
-        set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  status: 'canceled',
-                  phase: 'canceled',
-                  speed: 0,
-                  subFiles: t.subFiles?.map((sf) =>
-                    sf.status === 'downloading' ? { ...sf, status: 'pending' } : sf
-                  ),
-                }
-              : t
-          ),
-        }))
-      } else {
-        set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  status: 'error',
-                  phase: 'error',
-                  speed: 0,
-                  error: err.message || 'Packaging failed',
-                }
-              : t
-          ),
-        }))
-      }
+    } else {
+      useTransferStore.setState((state) => ({
+        tasks: state.tasks.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                status: 'error',
+                phase: 'error',
+                speed: 0,
+                error: err.message || 'Packaging failed',
+              }
+            : t
+        ),
+      }))
     }
-  },
-
-  cancelTask: (id) => {
-    const task = get().tasks.find((t) => t.id === id)
-    if (task) {
-      if (task.cancelSource) {
-        task.cancelSource.cancel('User cancelled')
-      }
-      if (task.abortController) {
-        task.abortController.abort()
-      }
-    }
-
-    set((state) => ({
-      tasks: state.tasks.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              status: 'canceled',
-              phase: 'canceled',
-              speed: 0,
-              subFiles: t.subFiles?.map((sf) =>
-                sf.status === 'downloading' ? { ...sf, status: 'pending' } : sf
-              ),
-            }
-          : t
-      ),
-    }))
-
-    processUploadQueue()
-    processDownloadQueue()
-  },
-
-  removeTask: (id) => {
-    get().cancelTask(id)
-    set((state) => ({
-      tasks: state.tasks.filter((t) => t.id !== id),
-    }))
-  },
-
-  retryTask: (id) => {
-    const task = get().tasks.find((t) => t.id === id)
-    if (!task) return
-
-    set((state) => ({
-      tasks: state.tasks.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              status: 'pending',
-              speed: 0,
-              error: undefined,
-            }
-          : t
-      ),
-    }))
-
-    processUploadQueue()
-    processDownloadQueue()
-  },
-
-  clearCompleted: () => {
-    set((state) => ({
-      tasks: state.tasks.filter(
-        (t) => t.status !== 'success' && t.status !== 'canceled'
-      ),
-    }))
-  },
-
-  toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
-  setOpen: (isOpen) => set({ isOpen }),
-  toggleMinimized: () => set((state) => ({ isMinimized: !state.isMinimized })),
-  setMinimized: (isMinimized) => set({ isMinimized }),
-
-  // Alias for backward compatibility
-  addFiles: (files, targetDir, password) =>
-    get().addUploadFiles(files, targetDir, password),
-}))
-
-// Export alias
-export const useUploadStore = useTransferStore
+  } finally {
+    processPackageQueue()
+  }
+}
 
 /**
  * Worker queue processing uploads
@@ -791,21 +1078,39 @@ async function processDownloadQueue() {
 }
 
 async function executeDownloadTask(task: TransferTask) {
-  if (!task.url) return
+  if (!task.url && !task.targetPath) return
 
   const abortController = new AbortController()
 
   useTransferStore.setState((state) => ({
     tasks: state.tasks.map((t) =>
       t.id === task.id
-        ? { ...t, status: 'downloading', abortController }
+        ? { ...t, status: 'downloading', abortController, error: undefined }
         : t
     ),
   }))
 
   try {
+    let activeUrl = task.url || ''
+
+    // Refresh direct URL if targetPath is available to avoid 403 expiration
+    if (task.targetPath) {
+      try {
+        const res = await fsGet(task.targetPath, task.password)
+        if (res.code === 200 && res.data?.raw_url) {
+          activeUrl = res.data.raw_url
+          const sep = activeUrl.includes('?') ? '&' : '?'
+          activeUrl = `${activeUrl}${sep}download`
+        }
+      } catch (_) {}
+    }
+
+    if (!activeUrl) {
+      throw new Error('Download URL not available')
+    }
+
     await downloadWithMultiThread({
-      url: task.url,
+      url: activeUrl,
       filename: task.name,
       taskId: task.id,
       threadCount: 4,
@@ -819,7 +1124,7 @@ async function executeDownloadTask(task: TransferTask) {
                   progress: p.percent,
                   loaded: p.downloadedBytes,
                   speed: p.speed,
-                  status: p.status === 'completed' ? 'success' : 'downloading',
+                  status: p.status === 'completed' ? 'success' : t.status === 'paused' ? 'paused' : 'downloading',
                 }
               : t
           ),
@@ -838,7 +1143,7 @@ async function executeDownloadTask(task: TransferTask) {
     if (abortController.signal.aborted) {
       useTransferStore.setState((state) => ({
         tasks: state.tasks.map((t) =>
-          t.id === task.id ? { ...t, status: 'canceled', speed: 0 } : t
+          t.id === task.id ? { ...t, status: t.status === 'paused' ? 'paused' : 'canceled', speed: 0 } : t
         ),
       }))
     } else {

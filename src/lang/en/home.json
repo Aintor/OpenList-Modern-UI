@@ -325,6 +325,18 @@
     "retry": "Retry",
     "cancel": "Cancel",
     "delete": "Delete task",
-    "clear_completed": "Clear completed"
+    "clear_completed": "Clear completed",
+    "pause": "Pause",
+    "resume": "Resume",
+    "pause_all": "Pause All",
+    "resume_all": "Resume All",
+    "paused": "Paused",
+    "ready": "Ready",
+    "waiting": "Waiting",
+    "stopped": "Stopped",
+    "paused_package_status": "Paused ({{completed}}/{{total}} ready)",
+    "continue_package": "Resume Packaging",
+    "pause_package": "Pause Packaging",
+    "package_completed": "Packaged (.zip)"
   }
 }

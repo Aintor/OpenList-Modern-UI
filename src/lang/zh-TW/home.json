@@ -325,6 +325,18 @@
     "retry": "重試",
     "cancel": "取消",
     "delete": "刪除任務",
-    "clear_completed": "清空已完成"
+    "clear_completed": "清空已完成",
+    "pause": "暫停",
+    "resume": "繼續",
+    "pause_all": "全部暫停",
+    "resume_all": "全部繼續",
+    "paused": "已暫停",
+    "ready": "就緒",
+    "waiting": "等待",
+    "stopped": "停止",
+    "paused_package_status": "已暫停 ({{completed}}/{{total}} 就緒)",
+    "continue_package": "繼續打包",
+    "pause_package": "暫停打包",
+    "package_completed": "打包完成 (.zip)"
   }
 }

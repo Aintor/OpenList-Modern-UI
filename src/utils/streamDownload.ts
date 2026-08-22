@@ -40,6 +40,42 @@ export interface MultiThreadDownloadOptions {
 }
 
 /**
+ * Helper to read stream chunk with idle timeout watchdog (prevents zombie streams on network drop)
+ */
+export async function readWithTimeout<T = Uint8Array>(
+  reader: ReadableStreamDefaultReader<T>,
+  timeoutMs = 15000
+): Promise<ReadableStreamReadResult<T>> {
+  return new Promise((resolve, reject) => {
+    let done = false
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true
+        reader.cancel('Read timeout').catch(() => {})
+        reject(new Error('Network read timeout (stalled connection)'))
+      }
+    }, timeoutMs)
+
+    reader.read().then(
+      (res) => {
+        if (!done) {
+          done = true
+          clearTimeout(timer)
+          resolve(res)
+        }
+      },
+      (err) => {
+        if (!done) {
+          done = true
+          clearTimeout(timer)
+          reject(err)
+        }
+      }
+    )
+  })
+}
+
+/**
  * Probe whether server/CDN supports HTTP Range Requests and get total file size
  */
 export async function probeRangeSupport(
@@ -130,7 +166,7 @@ async function downloadSingleStream(
           await writable.abort()
           throw new Error('Download aborted')
         }
-        const { done, value } = await reader.read()
+        const { done, value } = await readWithTimeout(reader, 15000)
         if (done) break
         if (value) {
           await writable.write(value)
@@ -332,14 +368,14 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
       return
     }
 
-    const maxRetries = 3
+    const maxRetries = 5
     let retryCount = 0
 
     while (thread.downloaded < thread.total) {
       if (signal?.aborted) throw new Error('Download canceled')
 
       let partWritable: any = null
-      let reader: any = null
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined = undefined
 
       try {
         if (tempDirHandle) {
@@ -359,7 +395,7 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
         })
 
         if (response.status !== 206 && response.status !== 200) {
-          throw new Error(`HTTP ${response.status}: Bucket busy or error`)
+          throw new Error(`HTTP ${response.status}: Bucket busy or direct link expired`)
         }
 
         reader = response.body?.getReader()
@@ -376,7 +412,7 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
             throw new Error('Download canceled')
           }
 
-          const { done, value } = await reader.read()
+          const { done, value } = await readWithTimeout(reader, 15000)
           if (done) break
 
           if (value) {
@@ -426,8 +462,9 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
           throw new Error(`Thread ${thread.id} failed after ${maxRetries} retries: ${err.message}`)
         }
 
-        // Exponential backoff before retrying chunk (500ms, 1000ms, 2000ms)
-        await new Promise((resolve) => setTimeout(resolve, 500 * Math.pow(2, retryCount - 1)))
+        // Exponential backoff before retrying chunk (1s, 1.8s, 3.2s, 5.8s, 10.5s)
+        const delayMs = Math.round(1000 * Math.pow(1.8, retryCount - 1))
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
       }
     }
   })
@@ -503,9 +540,30 @@ export async function downloadWithMultiThread(options: MultiThreadDownloadOption
 }
 
 /**
- * Global OPFS Sweeper: Cleans up all temporary sandbox files and folders
+ * Delete a specific task directory from OPFS sandbox
  */
-export async function cleanupOpfsTempFiles(): Promise<void> {
+export async function deleteOpfsTaskFolder(folderName: string): Promise<void> {
+  if (
+    typeof navigator === 'undefined' ||
+    !navigator.storage ||
+    typeof navigator.storage.getDirectory !== 'function' ||
+    !folderName
+  ) {
+    return
+  }
+  try {
+    const rootDir = await navigator.storage.getDirectory()
+    await rootDir.removeEntry(folderName, { recursive: true })
+  } catch (_) {}
+}
+
+/**
+ * Global OPFS Sweeper: Cleans up expired temporary sandbox files and folders (default maxAge: 24h)
+ */
+export async function cleanupOpfsTempFiles(
+  maxAgeMs = 24 * 60 * 60 * 1000,
+  preserveFolderNames?: Set<string> | string[]
+): Promise<void> {
   if (
     typeof navigator === 'undefined' ||
     !navigator.storage ||
@@ -514,15 +572,51 @@ export async function cleanupOpfsTempFiles(): Promise<void> {
     return
   }
 
+  const preserveSet =
+    preserveFolderNames instanceof Set
+      ? preserveFolderNames
+      : new Set(preserveFolderNames || [])
+
   try {
     const rootDir = await navigator.storage.getDirectory()
     // @ts-ignore
     if (typeof (rootDir as any).values === 'function') {
       // @ts-ignore
       for await (const entry of (rootDir as any).values()) {
-        if (entry.name.startsWith('dl_tmp_') || entry.name.startsWith('pkg_tmp_')) {
+        if (
+          entry.kind === 'directory' &&
+          (entry.name.startsWith('dl_task_') ||
+            entry.name.startsWith('pkg_task_') ||
+            entry.name.startsWith('dl_tmp_') ||
+            entry.name.startsWith('pkg_tmp_'))
+        ) {
+          // Never delete folders that belong to preserved active/paused tasks
+          if (preserveSet.has(entry.name)) {
+            continue
+          }
+
           try {
-            await rootDir.removeEntry(entry.name, { recursive: true })
+            // Check folder age
+            const dirHandle = await rootDir.getDirectoryHandle(entry.name)
+            let folderAge = Date.now()
+
+            // @ts-ignore
+            if (typeof dirHandle.values === 'function') {
+              // @ts-ignore
+              for await (const child of dirHandle.values()) {
+                if (child.kind === 'file') {
+                  const file = await child.getFile()
+                  if (file.lastModified < folderAge) {
+                    folderAge = file.lastModified
+                  }
+                }
+              }
+            }
+
+            // Only clean up if strictly older than maxAgeMs (default 24h)
+            if (Date.now() - folderAge > maxAgeMs) {
+              await rootDir.removeEntry(entry.name, { recursive: true })
+            }
           } catch (_) {}
         }
       }

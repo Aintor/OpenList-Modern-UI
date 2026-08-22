@@ -11,10 +11,12 @@ import {
   LogOut,
   FolderTree,
   Share2,
+  ArrowUpDown,
 } from 'lucide-react'
 import { useSettingsStore } from '~/store/useSettingsStore'
 import { useObjStore } from '~/store/useObjStore'
 import { useUserStore } from '~/store/useUserStore'
+import { useTransferStore } from '~/store/useTransferStore'
 import { useI18n, useT, languages, Locale } from '~/lang'
 import { CustomSelect } from '~/components/ui/CustomSelect'
 
@@ -34,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   const { theme, setTheme, layout, setLayout, getSetting, getLogoUrl } = useSettingsStore()
   const { currentPath, fetchPath } = useObjStore()
   const { user, logout } = useUserStore()
+  const { tasks, isOpen, setOpen } = useTransferStore()
   const { locale, setLocale } = useI18n()
   const t = useT()
 
@@ -218,6 +221,29 @@ export const Header: React.FC<HeaderProps> = ({
               <ListIcon className="h-4 w-4" />
             </button>
           </div>
+        )}
+
+        {/* Transfer Manager Header Trigger */}
+        {tasks.length > 0 && (
+          <button
+            onClick={() => setOpen(!isOpen)}
+            title={t('home.transfer.title') || 'Transfers'}
+            className={`relative rounded-xl border p-2 shadow-xs transition-all cursor-pointer ${
+              isOpen
+                ? 'border-indigo-600 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-400'
+                : 'border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+            }`}
+          >
+            <ArrowUpDown className="h-4 w-4" />
+            {tasks.filter((t) => t.status === 'downloading' || t.status === 'uploading' || t.status === 'processing').length > 0 ? (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600"></span>
+              </span>
+            ) : tasks.filter((t) => t.status === 'paused').length > 0 ? (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-amber-500"></span>
+            ) : null}
+          </button>
         )}
 
         {/* Theme Toggle Button (Dark / Light) */}

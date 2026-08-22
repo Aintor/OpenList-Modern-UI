@@ -24,7 +24,6 @@ import { useObjStore } from '~/store/useObjStore'
 import { useSettingsStore } from '~/store/useSettingsStore'
 import { useUserStore } from '~/store/useUserStore'
 import { useTransferStore } from '~/store/useTransferStore'
-import { cleanupOpfsTempFiles } from '~/utils/streamDownload'
 import { useT } from '~/lang'
 import { StoreObj, Obj, ObjType } from '~/types'
 import { Toaster } from 'sonner'
@@ -44,24 +43,6 @@ export function App() {
   const { layout, searchKeywords, fetchSettings } = useSettingsStore()
   const { user, initialized, fetchUser } = useUserStore()
   const t = useT()
-
-  // 1. Startup Sweeper: Clean orphan sandbox files from prior crashed/abrupt sessions
-  // 2. Page Exit Hook: Clean temp files on tab close / reload (beforeunload / pagehide)
-  useEffect(() => {
-    cleanupOpfsTempFiles()
-
-    const handleExit = () => {
-      cleanupOpfsTempFiles()
-    }
-
-    window.addEventListener('pagehide', handleExit)
-    window.addEventListener('beforeunload', handleExit)
-
-    return () => {
-      window.removeEventListener('pagehide', handleExit)
-      window.removeEventListener('beforeunload', handleExit)
-    }
-  }, [])
 
   // Manage view toggle
   const [isManageOpen, setIsManageOpen] = useState(false)
