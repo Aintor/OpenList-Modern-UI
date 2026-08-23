@@ -153,3 +153,12 @@
   --media-accent-color: var(--primary, #6366f1);
   --accent-color: var(--primary, #6366f1);
 }
+
+/* Disable Safari WebKit Live Text OCR ghost button on HTML5 video elements */
+video {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+video::-webkit-media-text-track-container {
+  display: none !important;
+}

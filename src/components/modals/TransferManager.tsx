@@ -49,6 +49,8 @@ export const TransferManager: React.FC = () => {
   const activeTasks = tasks.filter(
     (task) =>
       task.status === 'uploading' ||
+      task.status === 'hashing' ||
+      task.status === 'backending' ||
       task.status === 'downloading' ||
       task.status === 'processing'
   )
@@ -63,7 +65,7 @@ export const TransferManager: React.FC = () => {
     return (
       <div
         onClick={toggleMinimized}
-        className="fixed bottom-6 right-6 z-40 flex items-center space-x-2.5 rounded-2xl border border-slate-200/80 bg-white/90 px-3.5 py-2 shadow-lg shadow-black/5 backdrop-blur-xl transition-all hover:scale-105 dark:border-slate-800/80 dark:bg-slate-900/90 cursor-pointer animate-in fade-in slide-in-from-bottom-3 duration-150"
+        className="fixed bottom-6 right-6 z-30 flex items-center space-x-2.5 rounded-2xl border border-slate-200/80 bg-white/90 px-3.5 py-2 shadow-lg shadow-black/5 backdrop-blur-xl transition-all hover:scale-105 dark:border-slate-800/80 dark:bg-slate-900/90 cursor-pointer animate-in fade-in slide-in-from-bottom-3 duration-150"
       >
         <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 shrink-0">
           {activeTasks.length > 0 ? (
@@ -102,7 +104,7 @@ export const TransferManager: React.FC = () => {
 
   // 2. Ultra-Clean Minimalist Panel View
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex w-[370px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-xl shadow-black/10 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-900/95 animate-in fade-in slide-in-from-bottom-3 duration-150">
+    <div className="fixed bottom-6 right-6 z-30 flex w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-xl shadow-black/10 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-900/95 animate-in fade-in slide-in-from-bottom-3 duration-150">
       {/* Panel Header */}
       <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-slate-100 dark:border-slate-800/80">
         <div className="flex items-center space-x-2">
@@ -229,6 +231,10 @@ const StandardTaskItem: React.FC<{
           className={`h-full transition-all duration-200 ${
             task.status === 'success'
               ? 'bg-emerald-500'
+              : task.status === 'hashing'
+              ? 'bg-purple-500 animate-pulse'
+              : task.status === 'backending'
+              ? 'bg-amber-500 animate-pulse'
               : task.status === 'processing'
               ? 'bg-amber-500 animate-pulse'
               : task.status === 'paused'
@@ -259,6 +265,13 @@ const StandardTaskItem: React.FC<{
             </>
           )}
 
+          {task.status === 'hashing' && (
+            <span className="text-purple-600 dark:text-purple-400 font-semibold flex items-center space-x-1">
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              <span>{t('home.upload.hashing') || '计算秒传中...'}</span>
+            </span>
+          )}
+
           {task.status === 'uploading' && (
             <>
               <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
@@ -270,6 +283,13 @@ const StandardTaskItem: React.FC<{
                 </span>
               )}
             </>
+          )}
+
+          {task.status === 'backending' && (
+            <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center space-x-1">
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              <span>{t('home.upload.backending') || '转存中...'}</span>
+            </span>
           )}
 
           {task.status === 'processing' && (
@@ -321,6 +341,8 @@ const StandardTaskItem: React.FC<{
 
           <div className="flex items-center space-x-1">
             {(task.status === 'uploading' ||
+              task.status === 'hashing' ||
+              task.status === 'backending' ||
               task.status === 'downloading' ||
               task.status === 'processing') && (
               <button

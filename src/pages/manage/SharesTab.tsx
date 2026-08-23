@@ -17,6 +17,7 @@ import {
   ToggleRight,
   ExternalLink,
 } from 'lucide-react'
+import { ConfirmModal } from '~/components/ui/ConfirmModal'
 
 export interface ShareItem {
   id: string
@@ -38,6 +39,8 @@ export const SharesTab: React.FC = () => {
   const [shares, setShares] = useState<ShareItem[]>([])
   const [loading, setLoading] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [deletingShare, setDeletingShare] = useState<ShareItem | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchShares = async () => {
     setLoading(true)
@@ -60,18 +63,22 @@ export const SharesTab: React.FC = () => {
     fetchShares()
   }, [])
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('global.delete_confirm', { name: id }) || `Delete share link [${id}]?`)) return
+  const handleConfirmDelete = async () => {
+    if (!deletingShare) return
+    setDeleteLoading(true)
     try {
-      const resp = await r.post(`/share/delete?id=${id}`)
+      const resp = await r.post(`/share/delete?id=${deletingShare.id}`)
       if (resp.code === 200) {
         notify.success(t('global.delete_success') || 'Share link deleted')
+        setDeletingShare(null)
         fetchShares()
       } else {
         notify.error(resp.message || 'Delete failed')
       }
     } catch (e: any) {
       notify.error(e.message || 'Delete failed')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -257,9 +264,9 @@ export const SharesTab: React.FC = () => {
                           )}
                         </button>
                         <button
-                          onClick={() => handleDelete(s.id)}
+                          onClick={() => setDeletingShare(s)}
                           title={t('global.delete') || 'Delete'}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors"
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -272,6 +279,19 @@ export const SharesTab: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={deletingShare !== null}
+        title={t('global.delete') || '删除分享'}
+        description={
+          deletingShare
+            ? t('global.delete_confirm', { name: deletingShare.id })
+            : ''
+        }
+        loading={deleteLoading}
+        onClose={() => setDeletingShare(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }

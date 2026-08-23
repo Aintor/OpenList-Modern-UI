@@ -101,6 +101,12 @@
     "offline_download": "Offline download",
     "offline_download-tips": "One URL per line",
     "offline_download_torrent": "BT Fetch",
+    "root_dir": "Root Directory",
+    "upload_file": "Upload Files",
+    "upload_folder": "Upload Folder",
+    "select_all": "Select All",
+    "list_view": "Switch to List View",
+    "grid_view": "Switch to Grid View",
     "offline_download_enhanced": {
       "tab_link": "Link Download",
       "tab_bt": "BT Download",
@@ -301,7 +307,9 @@
     "all_completed": "All completed",
     "clear_completed": "Clear",
     "pending": "Pending",
+    "hashing": "Calculating Hash...",
     "uploading": "Uploading",
+    "backending": "Writing to storage...",
     "processing": "Processing...",
     "success": "Completed",
     "error": "Failed",
@@ -310,10 +318,20 @@
     "cancel": "Cancel",
     "speed": "{{speed}}/s",
     "drop_hint": "Drop files here to upload to current directory",
-    "empty_queue": "No active tasks"
+    "empty_queue": "No active tasks",
+    "upload_files": "Upload Files",
+    "upload_folder": "Upload Folder",
+    "try_rapid": "Try Rapid Upload"
   },
   "transfer": {
     "title": "Transfers",
+    "settings": "Transfer Settings",
+    "section_concurrency": "Concurrent Tasks",
+    "upload_concurrency": "Upload Tasks",
+    "download_concurrency": "Download Tasks",
+    "section_threads": "Direct Chunk Threads",
+    "upload_chunk_threads": "Upload Chunk Threads",
+    "download_chunk_threads": "Download Chunk Threads",
     "downloading": "Downloading",
     "uploading": "Uploading",
     "packaging": "Generating ZIP...",
@@ -338,5 +356,15 @@
     "continue_package": "Resume Packaging",
     "pause_package": "Pause Packaging",
     "package_completed": "Packaged (.zip)"
+  },
+  "player": {
+    "title": "Audio Player",
+    "playlist": "Playlist",
+    "list_repeat": "Repeat List",
+    "one_repeat": "Repeat Track",
+    "shuffle": "Shuffle",
+    "minimize": "Minimize to Disc",
+    "close": "Close Player",
+    "empty_playlist": "Playlist is empty"
   }
 }

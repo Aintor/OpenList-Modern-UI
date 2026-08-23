@@ -14,6 +14,7 @@ import {
   Edit3,
 } from 'lucide-react'
 import { AddOrEditStorageModal } from './AddOrEditStorageModal'
+import { ConfirmModal } from '~/components/ui/ConfirmModal'
 
 export const StoragesTab: React.FC = () => {
   const t = useT()
@@ -21,6 +22,8 @@ export const StoragesTab: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [editingStorageId, setEditingStorageId] = useState<number | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [deletingStorage, setDeletingStorage] = useState<Storage | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchStorages = async () => {
     setLoading(true)
@@ -57,18 +60,22 @@ export const StoragesTab: React.FC = () => {
     }
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm(t('global.delete_confirm') || 'Are you sure you want to delete this storage mount?')) return
+  const handleConfirmDelete = async () => {
+    if (!deletingStorage) return
+    setDeleteLoading(true)
     try {
-      const resp: Resp<any> = await r.post(`/admin/storage/delete?id=${id}`)
+      const resp: Resp<any> = await r.post(`/admin/storage/delete?id=${deletingStorage.id}`)
       if (resp.code === 200) {
         notify.success(t('global.delete_success') || 'Storage mount deleted')
+        setDeletingStorage(null)
         fetchStorages()
       } else {
         notify.error(resp.message || 'Failed to delete storage')
       }
     } catch (e: any) {
       notify.error(e.message || 'Failed to delete storage')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -195,9 +202,9 @@ export const StoragesTab: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => handleDelete(storage.id)}
+                  onClick={() => setDeletingStorage(storage)}
                   title="Delete storage mount"
-                  className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors"
+                  className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -216,6 +223,19 @@ export const StoragesTab: React.FC = () => {
           setEditingStorageId(null)
         }}
         onSuccess={fetchStorages}
+      />
+
+      <ConfirmModal
+        isOpen={deletingStorage !== null}
+        title={t('global.delete') || '删除存储'}
+        description={
+          deletingStorage
+            ? t('global.delete_confirm', { name: deletingStorage.mount_path })
+            : ''
+        }
+        loading={deleteLoading}
+        onClose={() => setDeletingStorage(null)}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   )

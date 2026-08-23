@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const fileCount = objs.filter((o) => !o.is_dir).length
 
   return (
-    <aside className="hidden h-full w-56 flex-col justify-between border-r border-slate-200/80 bg-white/50 p-4 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-950/50 md:flex">
+    <aside className="hidden h-full w-56 flex-col justify-between border-r border-slate-200/80 bg-white/50 p-4 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-950/50 md:flex select-none">
       {/* Quick Media Filter Categories */}
       <div className="space-y-1.5">
         <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">

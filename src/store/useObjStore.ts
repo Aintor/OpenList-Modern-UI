@@ -34,6 +34,7 @@ interface ObjState {
   header: string
   write: boolean
   provider: string
+  direct_upload_tools: string[]
   loading: boolean
   needPassword: boolean
   password: string
@@ -66,6 +67,7 @@ export const useObjStore = create<ObjState>((set, get) => ({
   header: '',
   write: false,
   provider: '',
+  direct_upload_tools: [],
   loading: false,
   needPassword: false,
   password: '',
@@ -137,6 +139,7 @@ export const useObjStore = create<ObjState>((set, get) => ({
           header: resp.data.header || (isIncremental ? get().header : ''),
           write: !!resp.data.write,
           provider: resp.data.provider || '',
+          direct_upload_tools: resp.data.direct_upload_tools || [],
           loading: false,
           loadingMore: false,
           needPassword: false,

@@ -5,6 +5,7 @@ import { notify } from '~/utils/notify'
 import { useT } from '~/lang'
 import { Shield, Trash2, RefreshCw, Loader2, Lock, EyeOff, Plus, Edit3 } from 'lucide-react'
 import { AddOrEditMetaModal } from './AddOrEditMetaModal'
+import { ConfirmModal } from '~/components/ui/ConfirmModal'
 
 export const MetasTab: React.FC = () => {
   const t = useT()
@@ -12,6 +13,8 @@ export const MetasTab: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [editingMetaId, setEditingMetaId] = useState<number | null>(null)
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [deletingMeta, setDeletingMeta] = useState<Meta | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchMetas = async () => {
     setLoading(true)
@@ -33,18 +36,22 @@ export const MetasTab: React.FC = () => {
     fetchMetas()
   }, [])
 
-  const handleDelete = async (id: number) => {
-    if (!confirm(t('global.delete_confirm') || 'Are you sure you want to delete this meta rule?')) return
+  const handleConfirmDelete = async () => {
+    if (!deletingMeta) return
+    setDeleteLoading(true)
     try {
-      const resp: Resp<any> = await r.post(`/admin/meta/delete?id=${id}`)
+      const resp: Resp<any> = await r.post(`/admin/meta/delete?id=${deletingMeta.id}`)
       if (resp.code === 200) {
         notify.success(t('global.delete_success') || 'Meta rule deleted')
+        setDeletingMeta(null)
         fetchMetas()
       } else {
         notify.error(resp.message || 'Failed to delete meta')
       }
     } catch (e: any) {
       notify.error(e.message || 'Failed to delete meta')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -73,7 +80,7 @@ export const MetasTab: React.FC = () => {
 
           <button
             onClick={() => setIsAddOpen(true)}
-            className="flex items-center space-x-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all"
+            className="flex items-center space-x-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>{t('global.add') || 'Add Meta Rule'}</span>
@@ -132,13 +139,13 @@ export const MetasTab: React.FC = () => {
                   <td className="p-3.5 text-right space-x-1">
                     <button
                       onClick={() => setEditingMetaId(m.id)}
-                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
+                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       <Edit3 className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(m.id)}
-                      className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors"
+                      onClick={() => setDeletingMeta(m)}
+                      className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -158,6 +165,19 @@ export const MetasTab: React.FC = () => {
           setEditingMetaId(null)
         }}
         onSuccess={fetchMetas}
+      />
+
+      <ConfirmModal
+        isOpen={deletingMeta !== null}
+        title={t('global.delete') || '删除元信息'}
+        description={
+          deletingMeta
+            ? t('global.delete_confirm', { name: deletingMeta.path })
+            : ''
+        }
+        loading={deleteLoading}
+        onClose={() => setDeletingMeta(null)}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   )

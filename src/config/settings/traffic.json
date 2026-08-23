@@ -28,7 +28,29 @@
           "key": "upload_task_threads_num",
           "type": "number",
           "labelKey": "settings.upload_task_threads_num",
-          "helpKey": "settings.upload_task_threads_num-tips"
+          "helpKey": "settings.upload_task_threads_num-tips",
+          "defaultValue": 5
+        },
+        {
+          "key": "download_task_threads_num",
+          "type": "number",
+          "labelKey": "settings.download_task_threads_num",
+          "helpKey": "settings.download_task_threads_num-tips",
+          "defaultValue": 5
+        },
+        {
+          "key": "client_download_threads_num",
+          "type": "number",
+          "labelKey": "settings.client_download_threads_num",
+          "helpKey": "settings.client_download_threads_num-tips",
+          "defaultValue": 5
+        },
+        {
+          "key": "client_upload_threads_num",
+          "type": "number",
+          "labelKey": "settings.client_upload_threads_num",
+          "helpKey": "settings.client_upload_threads_num-tips",
+          "defaultValue": 5
         },
         {
           "key": "copy_task_threads_num",
@@ -91,6 +113,53 @@
           "labelKey": "settings.multipart_enabled",
           "helpKey": "settings.multipart_enabled-tips",
           "defaultValue": true
+        },
+        {
+          "key": "rapid_upload_enabled",
+          "type": "switch",
+          "labelKey": "settings.rapid_upload_enabled",
+          "helpKey": "settings.rapid_upload_enabled-tips",
+          "defaultValue": true
+        },
+        {
+          "key": "enable_cdn_upload_fallback",
+          "type": "switch",
+          "labelKey": "settings.enable_cdn_upload_fallback",
+          "helpKey": "settings.enable_cdn_upload_fallback-tips",
+          "defaultValue": false
+        },
+        {
+          "key": "direct_fallback_min_size",
+          "type": "number",
+          "labelKey": "settings.direct_fallback_min_size",
+          "helpKey": "settings.direct_fallback_min_size-tips",
+          "defaultValue": 5,
+          "dependsOn": {
+            "field": "enable_cdn_upload_fallback",
+            "value": "true"
+          }
+        },
+        {
+          "key": "direct_fallback_min_speed",
+          "type": "number",
+          "labelKey": "settings.direct_fallback_min_speed",
+          "helpKey": "settings.direct_fallback_min_speed-tips",
+          "defaultValue": 100,
+          "dependsOn": {
+            "field": "enable_cdn_upload_fallback",
+            "value": "true"
+          }
+        },
+        {
+          "key": "direct_fallback_duration",
+          "type": "number",
+          "labelKey": "settings.direct_fallback_duration",
+          "helpKey": "settings.direct_fallback_duration-tips",
+          "defaultValue": 5,
+          "dependsOn": {
+            "field": "enable_cdn_upload_fallback",
+            "value": "true"
+          }
         }
       ]
     }

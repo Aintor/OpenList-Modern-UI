@@ -101,6 +101,12 @@
     "offline_download": "離線下載",
     "offline_download-tips": "每行一條鏈接",
     "offline_download_torrent": "BT 獲取",
+    "root_dir": "根目錄",
+    "upload_file": "上傳檔案",
+    "upload_folder": "上傳資料夾",
+    "select_all": "全選所有",
+    "list_view": "切換為列表檢視",
+    "grid_view": "切換為網格檢視",
     "offline_download_enhanced": {
       "tab_link": "鏈接下載",
       "tab_bt": "BT 下載",
@@ -301,8 +307,10 @@
     "all_completed": "全部已完成",
     "clear_completed": "清空",
     "pending": "排隊中",
+    "hashing": "計算秒傳中...",
     "uploading": "上傳中",
-    "processing": "儲存中...",
+    "backending": "存儲轉存中...",
+    "processing": "處理中...",
     "success": "上傳成功",
     "error": "上傳失敗",
     "canceled": "已取消",
@@ -310,10 +318,20 @@
     "cancel": "取消",
     "speed": "{{speed}}/s",
     "drop_hint": "釋放檔案以上傳至目前目錄",
-    "empty_queue": "暫無上傳任務"
+    "empty_queue": "暫無上傳任務",
+    "upload_files": "上傳檔案",
+    "upload_folder": "上傳資料夾",
+    "try_rapid": "嘗試秒傳"
   },
   "transfer": {
     "title": "傳輸列表",
+    "settings": "傳輸設定",
+    "section_concurrency": "同時進行任務數",
+    "upload_concurrency": "同時上傳任務數",
+    "download_concurrency": "同時下載任務數",
+    "section_threads": "單檔案分片/直連執行緒數",
+    "upload_chunk_threads": "直連/分片上傳執行緒",
+    "download_chunk_threads": "直連下載分片執行緒",
     "downloading": "下載中",
     "uploading": "上傳中",
     "packaging": "正在生成 ZIP...",
@@ -338,5 +356,15 @@
     "continue_package": "繼續打包",
     "pause_package": "暫停打包",
     "package_completed": "打包完成 (.zip)"
+  },
+  "player": {
+    "title": "音訊播放器",
+    "playlist": "播放清單",
+    "list_repeat": "清單循環",
+    "one_repeat": "單曲循環",
+    "shuffle": "隨機播放",
+    "minimize": "收起為黑膠膠囊",
+    "close": "關閉播放器",
+    "empty_playlist": "播放清單為空"
   }
 }

@@ -101,6 +101,12 @@
     "offline_download": "离线下载",
     "offline_download-tips": "每行一条链接",
     "offline_download_torrent": "BT 获取",
+    "root_dir": "根目录",
+    "upload_file": "上传文件",
+    "upload_folder": "上传文件夹",
+    "select_all": "全选所有",
+    "list_view": "切换为列表视图",
+    "grid_view": "切换为网格视图",
     "offline_download_enhanced": {
       "tab_link": "链接下载",
       "tab_bt": "BT 下载",
@@ -301,8 +307,10 @@
     "all_completed": "全部已完成",
     "clear_completed": "清空",
     "pending": "排队中",
+    "hashing": "计算秒传中...",
     "uploading": "上传中",
-    "processing": "转存中...",
+    "backending": "存储转存中...",
+    "processing": "处理中...",
     "success": "上传成功",
     "error": "上传失败",
     "canceled": "已取消",
@@ -310,10 +318,20 @@
     "cancel": "取消",
     "speed": "{{speed}}/s",
     "drop_hint": "释放文件以上传至当前目录",
-    "empty_queue": "暂无上传任务"
+    "empty_queue": "暂无上传任务",
+    "upload_files": "上传文件",
+    "upload_folder": "上传文件夹",
+    "try_rapid": "尝试秒传"
   },
   "transfer": {
     "title": "传输列表",
+    "settings": "传输设置",
+    "section_concurrency": "同时进行任务数",
+    "upload_concurrency": "同时上传任务数",
+    "download_concurrency": "同时下载任务数",
+    "section_threads": "单文件分片/直连线程数",
+    "upload_chunk_threads": "直连/分片上传线程",
+    "download_chunk_threads": "直连下载切片线程",
     "downloading": "下载中",
     "uploading": "上传中",
     "packaging": "正在生成 ZIP...",
@@ -338,5 +356,15 @@
     "continue_package": "继续打包",
     "pause_package": "暂停打包",
     "package_completed": "打包完成 (.zip)"
+  },
+  "player": {
+    "title": "音频播放器",
+    "playlist": "播放列表",
+    "list_repeat": "列表循环",
+    "one_repeat": "单曲循环",
+    "shuffle": "随机播放",
+    "minimize": "收起为黑胶胶囊",
+    "close": "关闭播放器",
+    "empty_playlist": "播放列表为空"
   }
 }

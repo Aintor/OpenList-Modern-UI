@@ -1,23 +1,31 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import axios, { CancelTokenSource } from 'axios'
+import { CancelTokenSource } from 'axios'
 import { downloadZip } from 'client-zip'
-import { fsStreamUpload, fsFormUpload, fsList, fsGet } from '~/utils/api'
+import { fsList, fsGet } from '~/utils/api'
 import { getDownloadUrl } from '~/utils/link'
 import { useObjStore } from './useObjStore'
+import { useSettingsStore } from './useSettingsStore'
 import {
   downloadWithMultiThread,
   readWithTimeout,
   deleteOpfsTaskFolder,
   cleanupOpfsTempFiles,
 } from '~/utils/streamDownload'
+import {
+  dispatchUpload,
+  UploadEngineType,
+  getFileRelativePath,
+} from '~/utils/upload'
 import { Obj } from '~/types'
 
 export type TransferType = 'upload' | 'download' | 'package'
 
 export type TransferStatus =
   | 'pending'
+  | 'hashing'
   | 'uploading'
+  | 'backending'
   | 'downloading'
   | 'processing'
   | 'paused'
@@ -44,6 +52,7 @@ export interface TransferTask {
   size: number
   targetDir?: string
   targetPath?: string
+  relativePath?: string
   password?: string
   status: TransferStatus
   progress: number
@@ -53,13 +62,14 @@ export interface TransferTask {
   createdAt?: number
   // Upload specific
   file?: File
+  uploadEngine?: UploadEngineType
   cancelSource?: CancelTokenSource
   // Download specific
   url?: string
   abortController?: AbortController
   // Package specific
   subFiles?: PackageSubFile[]
-  phase?: 'scanning' | 'downloading' | 'packaging' | 'success' | 'error' | 'canceled' | 'paused'
+  phase?: 'hashing' | 'uploading' | 'backending' | 'scanning' | 'downloading' | 'packaging' | 'success' | 'error' | 'canceled' | 'paused'
   completedFilesCount?: number
   totalFilesCount?: number
   targets?: Obj[]
@@ -71,6 +81,10 @@ interface TransferState {
   isMinimized: boolean
   maxConcurrency: number
   maxDownloadConcurrency: number
+  uploadChunkThreads: number
+  downloadChunkThreads: number
+  tryRapidUpload: boolean
+  overwritePolicy: 'overwrite' | 'skip'
 
   addUploadFiles: (files: File[], targetDir: string, password?: string) => void
   addDownloadTask: (name: string, size: number, url: string, targetPath?: string) => void
@@ -88,6 +102,12 @@ interface TransferState {
   setOpen: (open: boolean) => void
   toggleMinimized: () => void
   setMinimized: (minimized: boolean) => void
+  setMaxConcurrency: (max: number) => void
+  setMaxDownloadConcurrency: (max: number) => void
+  setUploadChunkThreads: (threads: number) => void
+  setDownloadChunkThreads: (threads: number) => void
+  setTryRapidUpload: (enabled: boolean) => void
+  setOverwritePolicy: (policy: 'overwrite' | 'skip') => void
 
   // Backward compatibility alias
   addFiles: (files: File[], targetDir: string, password?: string) => void
@@ -112,8 +132,19 @@ export const useTransferStore = create<TransferState>()(
       tasks: [],
       isOpen: false,
       isMinimized: false,
-      maxConcurrency: 2,
-      maxDownloadConcurrency: 3,
+      maxConcurrency: 5,
+      maxDownloadConcurrency: 5,
+      uploadChunkThreads: 5,
+      downloadChunkThreads: 5,
+      tryRapidUpload: true,
+      overwritePolicy: 'overwrite',
+
+      setMaxConcurrency: (maxConcurrency) => set({ maxConcurrency }),
+      setMaxDownloadConcurrency: (maxDownloadConcurrency) => set({ maxDownloadConcurrency }),
+      setUploadChunkThreads: (uploadChunkThreads) => set({ uploadChunkThreads }),
+      setDownloadChunkThreads: (downloadChunkThreads) => set({ downloadChunkThreads }),
+      setTryRapidUpload: (tryRapidUpload) => set({ tryRapidUpload }),
+      setOverwritePolicy: (overwritePolicy) => set({ overwritePolicy }),
 
       addUploadFiles: (files, targetDir, password = '') => {
         if (!files.length) return
@@ -121,18 +152,21 @@ export const useTransferStore = create<TransferState>()(
         const normalizedDir = targetDir.endsWith('/') ? targetDir : targetDir + '/'
         const newTasks: TransferTask[] = files.map((file) => {
           const id = `up-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-          const targetPath = normalizedDir === '/' ? `/${file.name}` : `${normalizedDir}${file.name}`
+          const relPath = getFileRelativePath(file)
+          const targetPath = normalizedDir === '/' ? `/${relPath}` : `${normalizedDir}${relPath}`
 
           return {
             id,
             type: 'upload',
             file,
             name: file.name,
+            relativePath: relPath,
             size: file.size,
             targetDir,
             targetPath,
             password,
             status: 'pending',
+            phase: 'uploading',
             progress: 0,
             loaded: 0,
             speed: 0,
@@ -361,7 +395,9 @@ export const useTransferStore = create<TransferState>()(
           const restoredStatus: TransferStatus =
             t.status === 'downloading' ||
             t.status === 'processing' ||
-            t.status === 'uploading'
+            t.status === 'uploading' ||
+            t.status === 'hashing' ||
+            t.status === 'backending'
               ? 'paused'
               : t.status
 
@@ -383,6 +419,12 @@ export const useTransferStore = create<TransferState>()(
         }),
         isOpen: state.isOpen || state.tasks.length > 0,
         isMinimized: state.isMinimized,
+        maxConcurrency: state.maxConcurrency,
+        maxDownloadConcurrency: state.maxDownloadConcurrency,
+        uploadChunkThreads: state.uploadChunkThreads,
+        downloadChunkThreads: state.downloadChunkThreads,
+        tryRapidUpload: state.tryRapidUpload,
+        overwritePolicy: state.overwritePolicy,
       }),
       onRehydrateStorage: () => {
         return (state) => {
@@ -897,7 +939,11 @@ async function processUploadQueue() {
       (t) => t.type === 'upload' && (t.status === 'uploading' || t.status === 'processing')
     )
 
-    const availableSlots = store.maxConcurrency - activeUploads.length
+    const maxUploadSlots =
+      store.maxConcurrency ||
+      parseInt(useSettingsStore.getState().getSetting('upload_task_threads_num', '5'), 10) ||
+      5
+    const availableSlots = maxUploadSlots - activeUploads.length
     if (availableSlots <= 0) {
       isProcessingUpload = false
       return
@@ -924,102 +970,115 @@ async function processUploadQueue() {
 async function executeUploadTask(task: TransferTask) {
   if (!task.file) return
 
-  const cancelSource = axios.CancelToken.source()
+  const abortController = new AbortController()
 
   useTransferStore.setState((state) => ({
     tasks: state.tasks.map((t) =>
       t.id === task.id
-        ? { ...t, status: 'uploading', cancelSource }
+        ? { ...t, status: 'uploading', abortController, error: undefined }
         : t
     ),
   }))
 
-  let lastLoaded = 0
-  let lastTime = Date.now()
-
   try {
-    const onUploadProgress = (percent: number, loaded: number, _total: number) => {
-      const now = Date.now()
-      const timeDelta = (now - lastTime) / 1000
+    const transferStore = useTransferStore.getState()
+    const settingsStore = useSettingsStore.getState()
+    const objStore = useObjStore.getState()
 
-      let speed = 0
-      if (timeDelta >= 0.5) {
-        const byteDelta = loaded - lastLoaded
-        speed = Math.max(0, byteDelta / timeDelta)
-        lastLoaded = loaded
-        lastTime = now
-      }
+    const rapid =
+      transferStore.tryRapidUpload &&
+      settingsStore.getSettingBool('rapid_upload_enabled', true)
+    const overwrite = transferStore.overwritePolicy !== 'skip'
+    const directUploadTools = objStore.direct_upload_tools || []
+    const multipartEnabled = settingsStore.getSettingBool('multipart_enabled', true)
+    const multipartChunkSizeMB =
+      parseInt(settingsStore.getSetting('multipart_chunk_size', '10'), 10) || 10
+    const enableCdnFallback = settingsStore.getSettingBool('enable_cdn_upload_fallback', false)
+    const directFallbackMinSizeMB =
+      parseInt(settingsStore.getSetting('direct_fallback_min_size', '5'), 10) || 5
+    const directFallbackMinSpeedKB =
+      parseInt(settingsStore.getSetting('direct_fallback_min_speed', '100'), 10) || 100
+    const directFallbackDurationSec =
+      parseInt(settingsStore.getSetting('direct_fallback_duration', '5'), 10) || 5
+    const chunkThreads =
+      transferStore.uploadChunkThreads ||
+      parseInt(settingsStore.getSetting('client_upload_threads_num', '5'), 10) ||
+      5
 
+    await dispatchUpload({
+      targetPath: task.targetPath || `/${task.name}`,
+      file: task.file,
+      password: task.password,
+      overwrite,
+      rapid,
+      directUploadTools,
+      multipartEnabled,
+      multipartChunkSizeMB,
+      chunkThreads,
+      enableCdnFallback,
+      directFallbackMinSizeMB,
+      directFallbackMinSpeedKB,
+      directFallbackDurationSec,
+      signal: abortController.signal,
+      onProgress: (p) => {
+        useTransferStore.setState((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === task.id
+              ? {
+                  ...t,
+                  progress: p.progress !== undefined ? p.progress : t.progress,
+                  loaded: p.loaded !== undefined ? p.loaded : t.loaded,
+                  speed: p.speed !== undefined ? p.speed : t.speed,
+                  status:
+                    p.status === 'success'
+                      ? 'success'
+                      : t.status === 'paused'
+                      ? 'paused'
+                      : (p.status as TransferStatus) || t.status,
+                  phase: (p.status as any) || t.phase,
+                  uploadEngine: p.engine || t.uploadEngine,
+                }
+              : t
+          ),
+        }))
+      },
+    })
+
+    useTransferStore.setState((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === task.id
+          ? {
+              ...t,
+              status: 'success',
+              phase: 'success',
+              progress: 100,
+              loaded: task.file?.size || t.size,
+              speed: 0,
+            }
+          : t
+      ),
+    }))
+
+    // Refresh file list if user is viewing target directory
+    const currentPath = objStore.currentPath
+    if (
+      task.targetDir &&
+      (currentPath === task.targetDir || currentPath === task.targetDir.replace(/\/$/, ''))
+    ) {
+      objStore.fetchPath(objStore.currentPath, objStore.password, true)
+    }
+  } catch (err: any) {
+    if (abortController.signal.aborted || err?.message === 'Upload canceled') {
       useTransferStore.setState((state) => ({
         tasks: state.tasks.map((t) =>
           t.id === task.id
             ? {
                 ...t,
-                progress: Math.min(99, percent),
-                loaded,
-                speed: speed > 0 ? speed : t.speed,
-              }
-            : t
-        ),
-      }))
-    }
-
-    const isSmall = task.file.size < 5 * 1024 * 1024
-    let resp: any
-
-    if (isSmall) {
-      resp = await fsFormUpload(
-        task.targetPath || `/${task.name}`,
-        task.file,
-        task.password,
-        false,
-        false,
-        onUploadProgress,
-        cancelSource.token
-      )
-    } else {
-      resp = await fsStreamUpload(
-        task.targetPath || `/${task.name}`,
-        task.file,
-        task.password,
-        false,
-        false,
-        onUploadProgress,
-        cancelSource.token
-      )
-    }
-
-    if (resp.code === 200) {
-      useTransferStore.setState((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === task.id
-            ? {
-                ...t,
-                status: 'success',
-                progress: 100,
+                status: t.status === 'paused' ? 'paused' : 'canceled',
+                phase: t.status === 'paused' ? 'paused' : 'canceled',
                 speed: 0,
               }
             : t
-        ),
-      }))
-
-      // Refresh file list
-      const objStore = useObjStore.getState()
-      if (
-        task.targetDir &&
-        (objStore.currentPath === task.targetDir ||
-          objStore.currentPath === task.targetDir.replace(/\/$/, ''))
-      ) {
-        objStore.fetchPath(objStore.currentPath, objStore.password, true)
-      }
-    } else {
-      throw new Error(resp.message || 'Upload failed')
-    }
-  } catch (err: any) {
-    if (axios.isCancel(err)) {
-      useTransferStore.setState((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === task.id ? { ...t, status: 'canceled', speed: 0 } : t
         ),
       }))
     } else {
@@ -1029,6 +1088,7 @@ async function executeUploadTask(task: TransferTask) {
             ? {
                 ...t,
                 status: 'error',
+                phase: 'error',
                 speed: 0,
                 error: err.response?.data?.message || err.message || 'Upload failed',
               }
@@ -1054,7 +1114,11 @@ async function processDownloadQueue() {
       (t) => t.type === 'download' && (t.status === 'downloading' || t.status === 'processing')
     )
 
-    const availableSlots = (store.maxDownloadConcurrency || 3) - activeDownloads.length
+    const maxDownloadSlots =
+      store.maxDownloadConcurrency ||
+      parseInt(useSettingsStore.getState().getSetting('download_task_threads_num', '5'), 10) ||
+      5
+    const availableSlots = maxDownloadSlots - activeDownloads.length
     if (availableSlots <= 0) {
       isProcessingDownload = false
       return
@@ -1105,15 +1169,18 @@ async function executeDownloadTask(task: TransferTask) {
       } catch (_) {}
     }
 
-    if (!activeUrl) {
-      throw new Error('Download URL not available')
-    }
+    const transferStore = useTransferStore.getState()
+    const settingsStore = useSettingsStore.getState()
+    const downloadThreads =
+      transferStore.downloadChunkThreads ||
+      parseInt(settingsStore.getSetting('client_download_threads_num', '5'), 10) ||
+      5
 
     await downloadWithMultiThread({
       url: activeUrl,
       filename: task.name,
       taskId: task.id,
-      threadCount: 4,
+      threadCount: downloadThreads,
       signal: abortController.signal,
       onProgress: (p) => {
         useTransferStore.setState((state) => ({

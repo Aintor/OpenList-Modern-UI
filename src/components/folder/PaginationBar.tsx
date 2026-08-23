@@ -69,8 +69,8 @@ export const PaginationBar: React.FC = () => {
     }
 
     return (
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-8 px-4 border-t border-slate-100 dark:border-slate-800/80">
-        <div className="text-xs text-slate-500 dark:text-slate-400">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-8 px-4 border-t border-slate-100 dark:border-slate-800/80 select-none">
+        <div className="text-xs text-slate-500 dark:text-slate-400 select-none">
           <span>{t('home.toolbar.offline_download_enhanced.files_count') ? `共 ${total} 项` : `Total ${total} items`}</span>
           <span className="mx-2 text-slate-300 dark:text-slate-700">·</span>
           <span>{t('home.toolbar.page') || 'Page'} {page} / {totalPages}</span>

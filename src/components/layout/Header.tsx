@@ -19,6 +19,7 @@ import { useUserStore } from '~/store/useUserStore'
 import { useTransferStore } from '~/store/useTransferStore'
 import { useI18n, useT, languages, Locale } from '~/lang'
 import { CustomSelect } from '~/components/ui/CustomSelect'
+import { Tooltip } from '~/components/ui/Tooltip'
 
 interface HeaderProps {
   onOpenLoginModal: () => void
@@ -103,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, [currentPath])
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 sm:px-6 backdrop-blur-md transition-colors dark:border-slate-800/80 dark:bg-slate-950/80">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 sm:px-6 backdrop-blur-md transition-colors dark:border-slate-800/80 dark:bg-slate-950/80 select-none">
       {/* Left: Dynamic Logo & Overflow-Protected Breadcrumb Bar */}
       <div className="flex items-center space-x-3 overflow-hidden flex-1 min-w-0 pr-3">
         {/* Brand / Logo */}
@@ -185,75 +186,80 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center space-x-2 shrink-0">
         {/* Spotlight Command Palette Global Search Trigger */}
         {!isManageOpen && (
-          <button
-            onClick={onOpenSearchModal}
-            title={`${t('home.search.search') || 'Search'} (⌘K)`}
-            className="flex items-center space-x-1.5 rounded-xl border border-slate-200/80 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <Search className="h-3.5 w-3.5 text-slate-400" />
-            <span className="hidden sm:inline text-slate-400 font-mono text-[10px]">⌘K</span>
-          </button>
+          <Tooltip content={`${t('home.search.search') || 'Search'} (⌘K)`} side="bottom">
+            <button
+              onClick={onOpenSearchModal}
+              className="flex items-center space-x-1.5 rounded-xl border border-slate-200/80 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <Search className="h-3.5 w-3.5 text-slate-400" />
+              <span className="hidden sm:inline text-slate-400 font-mono text-[10px]">⌘K</span>
+            </button>
+          </Tooltip>
         )}
 
         {/* Layout Switcher (Grid / List) */}
         {!isManageOpen && (
           <div className="flex items-center rounded-xl border border-slate-200/80 bg-slate-50 p-0.5 dark:border-slate-800 dark:bg-slate-900">
-            <button
-              onClick={() => setLayout('grid')}
-              title={t('home.layouts.grid') || 'Grid View'}
-              className={`rounded-lg p-1.5 transition-all ${
-                layout === 'grid'
-                  ? 'bg-white text-indigo-600 shadow-xs dark:bg-slate-800 dark:text-indigo-400'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-              }`}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setLayout('list')}
-              title={t('home.layouts.list') || 'List View'}
-              className={`rounded-lg p-1.5 transition-all ${
-                layout === 'list'
-                  ? 'bg-white text-indigo-600 shadow-xs dark:bg-slate-800 dark:text-indigo-400'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-              }`}
-            >
-              <ListIcon className="h-4 w-4" />
-            </button>
+            <Tooltip content={t('home.layouts.grid') || 'Grid View'} side="bottom">
+              <button
+                onClick={() => setLayout('grid')}
+                className={`rounded-lg p-1.5 transition-all ${
+                  layout === 'grid'
+                    ? 'bg-white text-indigo-600 shadow-xs dark:bg-slate-800 dark:text-indigo-400'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content={t('home.layouts.list') || 'List View'} side="bottom">
+              <button
+                onClick={() => setLayout('list')}
+                className={`rounded-lg p-1.5 transition-all ${
+                  layout === 'list'
+                    ? 'bg-white text-indigo-600 shadow-xs dark:bg-slate-800 dark:text-indigo-400'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                }`}
+              >
+                <ListIcon className="h-4 w-4" />
+              </button>
+            </Tooltip>
           </div>
         )}
 
         {/* Transfer Manager Header Trigger */}
         {tasks.length > 0 && (
-          <button
-            onClick={() => setOpen(!isOpen)}
-            title={t('home.transfer.title') || 'Transfers'}
-            className={`relative rounded-xl border p-2 shadow-xs transition-all cursor-pointer ${
-              isOpen
-                ? 'border-indigo-600 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-400'
-                : 'border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
-            }`}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-            {tasks.filter((t) => t.status === 'downloading' || t.status === 'uploading' || t.status === 'processing').length > 0 ? (
-              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600"></span>
-              </span>
-            ) : tasks.filter((t) => t.status === 'paused').length > 0 ? (
-              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-amber-500"></span>
-            ) : null}
-          </button>
+          <Tooltip content={t('home.transfer.title') || 'Transfers'} side="bottom">
+            <button
+              onClick={() => setOpen(!isOpen)}
+              className={`relative rounded-xl border p-2 shadow-xs transition-all cursor-pointer ${
+                isOpen
+                  ? 'border-indigo-600 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-400'
+                  : 'border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+              }`}
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              {tasks.filter((t) => t.status === 'downloading' || t.status === 'uploading' || t.status === 'processing').length > 0 ? (
+                <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600"></span>
+                </span>
+              ) : tasks.filter((t) => t.status === 'paused').length > 0 ? (
+                <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-amber-500"></span>
+              ) : null}
+            </button>
+          </Tooltip>
         )}
 
         {/* Theme Toggle Button (Dark / Light) */}
-        <button
-          onClick={toggleTheme}
-          title={t('home.toolbar.toggle_theme') || 'Toggle theme'}
-          className="rounded-xl border border-slate-200/80 bg-white p-2 text-slate-600 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-        >
-          {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
-        </button>
+        <Tooltip content={t('home.toolbar.toggle_theme') || 'Toggle theme'} side="bottom">
+          <button
+            onClick={toggleTheme}
+            className="rounded-xl border border-slate-200/80 bg-white p-2 text-slate-600 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
+          </button>
+        </Tooltip>
 
         {/* Language Selector Dropdown */}
         <CustomSelect
@@ -284,13 +290,14 @@ export const Header: React.FC<HeaderProps> = ({
         {/* User Logout Button / Login Button (Hidden on Share Pages) */}
         {!isShare && (
           user ? (
-            <button
-              onClick={logout}
-              title={t('home.toolbar.logout') || 'Logout'}
-              className="rounded-xl border border-slate-200/80 bg-white p-2 text-slate-600 shadow-xs hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 dark:hover:border-rose-900/50 transition-all cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <Tooltip content={t('home.toolbar.logout') || 'Logout'} side="bottom">
+              <button
+                onClick={logout}
+                className="rounded-xl border border-slate-200/80 bg-white p-2 text-slate-600 shadow-xs hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 dark:hover:border-rose-900/50 transition-all cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </Tooltip>
           ) : (
             <button
               onClick={onOpenLoginModal}

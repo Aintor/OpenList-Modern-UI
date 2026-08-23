@@ -5,6 +5,7 @@ import { notify } from '~/utils/notify'
 import { useT } from '~/lang'
 import { Users, Trash2, RefreshCw, Loader2, ShieldCheck, User as UserIcon, Plus, Edit3 } from 'lucide-react'
 import { AddOrEditUserModal } from './AddOrEditUserModal'
+import { ConfirmModal } from '~/components/ui/ConfirmModal'
 
 export const UsersTab: React.FC = () => {
   const t = useT()
@@ -12,6 +13,8 @@ export const UsersTab: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [editingUserId, setEditingUserId] = useState<number | null>(null)
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [deletingUser, setDeletingUser] = useState<User | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -33,18 +36,22 @@ export const UsersTab: React.FC = () => {
     fetchUsers()
   }, [])
 
-  const handleDelete = async (id: number) => {
-    if (!confirm(t('global.delete_confirm') || 'Are you sure you want to delete this user?')) return
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return
+    setDeleteLoading(true)
     try {
-      const resp: Resp<any> = await r.post(`/admin/user/delete?id=${id}`)
+      const resp: Resp<any> = await r.post(`/admin/user/delete?id=${deletingUser.id}`)
       if (resp.code === 200) {
         notify.success(t('global.delete_success') || 'User deleted successfully')
+        setDeletingUser(null)
         fetchUsers()
       } else {
         notify.error(resp.message || 'Failed to delete user')
       }
     } catch (e: any) {
       notify.error(e.message || 'Failed to delete user')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -57,7 +64,7 @@ export const UsersTab: React.FC = () => {
             {t('manage.sidemenu.users') || 'User Management'}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('users.permission') ? '管理用户访问角色、权限体系与主目录限制' : 'Control user access roles, permissions, and directory restrictions'}
+            {t('users.user_desc') || '管理用户访问角色、权限体系与主目录限制'}
           </p>
         </div>
 
@@ -73,7 +80,7 @@ export const UsersTab: React.FC = () => {
 
           <button
             onClick={() => setIsAddOpen(true)}
-            className="flex items-center space-x-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all"
+            className="flex items-center space-x-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>{t('global.add') || 'Add User'}</span>
@@ -126,7 +133,7 @@ export const UsersTab: React.FC = () => {
                         : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                     }`}>
                       {u.role === 2 ? <ShieldCheck className="h-3 w-3 mr-1" /> : <UserIcon className="h-3 w-3 mr-1" />}
-                      <span>{u.role === 2 ? 'Admin' : 'General'}</span>
+                      <span>{u.role === 2 ? (t('users.admin_user') || 'Admin') : (t('users.general_user') || 'General')}</span>
                     </span>
                   </td>
                   <td className="p-3.5 text-slate-500 font-mono text-[11px]">
@@ -135,14 +142,14 @@ export const UsersTab: React.FC = () => {
                   <td className="p-3.5 text-right space-x-1">
                     <button
                       onClick={() => setEditingUserId(u.id)}
-                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
+                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       <Edit3 className="h-4 w-4" />
                     </button>
                     {u.id !== 1 && (
                       <button
-                        onClick={() => handleDelete(u.id)}
-                        className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors"
+                        onClick={() => setDeletingUser(u)}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -164,6 +171,20 @@ export const UsersTab: React.FC = () => {
         }}
         onSuccess={fetchUsers}
       />
+
+      <ConfirmModal
+        isOpen={deletingUser !== null}
+        title={t('users.delete_user') || t('global.delete') || '删除用户'}
+        description={
+          deletingUser
+            ? t('global.delete_confirm', { name: deletingUser.username })
+            : ''
+        }
+        loading={deleteLoading}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }
+

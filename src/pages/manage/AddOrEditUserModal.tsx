@@ -93,8 +93,14 @@ export const AddOrEditUserModal: React.FC<AddOrEditUserModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative flex max-h-[90vh] w-full max-w-xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden dark:border-slate-800 dark:bg-slate-900">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative flex max-h-[90vh] w-full max-w-xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden dark:border-slate-800 dark:bg-slate-900"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div className="flex items-center space-x-3">
@@ -106,7 +112,7 @@ export const AddOrEditUserModal: React.FC<AddOrEditUserModalProps> = ({
                 {userId ? (t('global.edit') || 'Edit User') : (t('global.add') || 'Add User')}
               </h3>
               <p className="text-[11px] text-slate-400">
-                {userId ? `User ID #${userId}` : 'Create a new user account'}
+                {userId ? `User ID #${userId}` : (t('users.create_user_tips') || '创建新的用户账户')}
               </p>
             </div>
           </div>
@@ -177,9 +183,9 @@ export const AddOrEditUserModal: React.FC<AddOrEditUserModalProps> = ({
                     value={role}
                     onChange={(val) => setRole(Number(val))}
                     options={[
-                      { value: UserRole.GENERAL, label: 'General User' },
-                      { value: UserRole.ADMIN, label: 'Administrator' },
-                      { value: UserRole.GUEST, label: 'Guest' },
+                      { value: UserRole.GENERAL, label: t('users.general_user') || 'General User' },
+                      { value: UserRole.ADMIN, label: t('users.admin_user') || 'Administrator' },
+                      { value: UserRole.GUEST, label: t('users.guest_user') || 'Guest' },
                     ]}
                     className="w-full"
                     triggerClassName="h-10 text-xs w-full bg-slate-50 dark:bg-slate-950/60 dark:border-slate-800 font-semibold"
@@ -187,35 +193,37 @@ export const AddOrEditUserModal: React.FC<AddOrEditUserModalProps> = ({
                 </div>
               </div>
 
-              {/* Permissions Checkbox Grid */}
+              {/* Permissions Checkbox Grid / Flow */}
               <div className="space-y-2 pt-2">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   {t('users.permission') || 'Permissions'}
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {UserPermissions.map((permName, index) => {
                     const isChecked = (permission & (1 << index)) !== 0
+                    const labelText = t(`users.permissions.${permName}`) || permName
                     return (
                       <button
                         type="button"
                         key={permName}
                         onClick={() => handleTogglePermission(index)}
-                        className={`flex items-center space-x-2 rounded-xl border p-2 text-left text-xs transition-all cursor-pointer ${
+                        title={labelText}
+                        className={`inline-flex items-center space-x-2 rounded-xl border px-3 py-2 text-left text-xs transition-all cursor-pointer select-none ${
                           isChecked
-                            ? 'border-indigo-500/50 bg-indigo-50/50 font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/50 dark:text-indigo-300'
-                            : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-400 dark:hover:bg-slate-800'
+                            ? 'border-indigo-500/50 bg-indigo-50/70 font-semibold text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-950/60 dark:text-indigo-300 shadow-xs'
+                            : 'border-slate-200/80 bg-slate-50/60 text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-400 dark:hover:bg-slate-800/80'
                         }`}
                       >
                         <div
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
                             isChecked
                               ? 'border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500'
-                              : 'border-slate-300 dark:border-slate-700'
+                              : 'border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900'
                           }`}
                         >
-                          {isChecked && <span className="text-[10px] leading-none">✓</span>}
+                          {isChecked && <span className="text-[10px] font-bold leading-none">✓</span>}
                         </div>
-                        <span className="truncate">{t(`users.permissions.${permName}`) || permName}</span>
+                        <span>{labelText}</span>
                       </button>
                     )
                   })}
@@ -229,7 +237,7 @@ export const AddOrEditUserModal: React.FC<AddOrEditUserModalProps> = ({
                     {t('users.disabled') || 'Disable Account'}
                   </div>
                   <div className="text-[10px] text-slate-400">
-                    Prevent this user from logging in
+                    {t('users.disabled-tips') || 'Prevent this user from logging in'}
                   </div>
                 </div>
                 <button

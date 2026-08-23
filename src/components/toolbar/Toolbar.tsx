@@ -21,11 +21,12 @@ import {
 } from 'lucide-react'
 import { useObjStore, OrderBy } from '~/store/useObjStore'
 import { useUserStore } from '~/store/useUserStore'
-import { useUploadStore } from '~/store/useUploadStore'
+import { useTransferStore } from '~/store/useTransferStore'
 import { useDownload } from '~/hooks/useDownload'
 import { useT } from '~/lang'
 import { Obj } from '~/types'
 import { CustomSelect } from '~/components/ui/CustomSelect'
+import { Tooltip } from '~/components/ui/Tooltip'
 
 interface ToolbarProps {
   onOpenMkdir: () => void
@@ -60,11 +61,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   } = useObjStore()
   const { user } = useUserStore()
   const { batchDownload, exportPlaylist, sendToAria2 } = useDownload()
-  const { addFiles } = useUploadStore()
+  const { addUploadFiles } = useTransferStore()
   const t = useT()
 
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false)
   const downloadDropdownRef = useRef<HTMLDivElement>(null)
+
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false)
+  const uploadDropdownRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
 
   const selectedObjs = getSelectedObjs()
   const isAllSelected = objs.length > 0 && selectedObjs.length === objs.length
@@ -77,7 +83,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     }
   }, [selectedObjs.length])
 
-  // Click outside to close dropdown
+  // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -87,16 +93,24 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       ) {
         setDownloadMenuOpen(false)
       }
+      if (
+        uploadMenuOpen &&
+        uploadDropdownRef.current &&
+        !uploadDropdownRef.current.contains(e.target as Node)
+      ) {
+        setUploadMenuOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [downloadMenuOpen])
+  }, [downloadMenuOpen, uploadMenuOpen])
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return
     const files = Array.from(e.target.files)
-    addFiles(files, currentPath, password)
+    addUploadFiles(files, currentPath, password)
     e.target.value = ''
+    setUploadMenuOpen(false)
   }
 
   const sortOptions = [
@@ -109,18 +123,71 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 select-none">
       {/* Left Action Buttons */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Upload Button */}
+        {/* Upload Button with Dropdown for Files / Folders */}
         {write && (
-          <label className="flex cursor-pointer items-center space-x-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-all hover:bg-indigo-700 active:scale-95">
-            <UploadCloud className="h-4 w-4" />
-            <span>{t('home.toolbar.upload') || 'Upload'}</span>
+          <div ref={uploadDropdownRef} className="relative">
+            <div className="flex items-center rounded-xl bg-indigo-600 shadow-xs hover:bg-indigo-700 transition-all text-white">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold cursor-pointer active:scale-95 transition-transform"
+              >
+                <UploadCloud className="h-4 w-4" />
+                <span>{t('home.toolbar.upload') || 'Upload'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadMenuOpen(!uploadMenuOpen)}
+                className="px-1.5 py-2 border-l border-indigo-500/50 hover:bg-indigo-800 rounded-r-xl transition-colors cursor-pointer"
+                title={t('home.upload.upload_folder') || 'Upload options'}
+              >
+                <ChevronDown className="h-3.5 w-3.5 opacity-80" />
+              </button>
+            </div>
+
             <input
+              ref={fileInputRef}
               type="file"
               multiple
               className="hidden"
               onChange={handleFileUpload}
             />
-          </label>
+
+            <input
+              ref={folderInputRef}
+              type="file"
+              multiple
+              {...({ webkitdirectory: '', directory: '' } as any)}
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+
+            {uploadMenuOpen && (
+              <div className="absolute top-full mt-1.5 left-0 w-44 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-900 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <button
+                  onClick={() => {
+                    fileInputRef.current?.click()
+                    setUploadMenuOpen(false)
+                  }}
+                  className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  <UploadCloud className="h-3.5 w-3.5 text-indigo-500" />
+                  <span>{t('home.upload.upload_files') || 'Upload Files'}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    folderInputRef.current?.click()
+                    setUploadMenuOpen(false)
+                  }}
+                  className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  <FolderPlus className="h-3.5 w-3.5 text-indigo-500" />
+                  <span>{t('home.upload.upload_folder') || 'Upload Folder'}</span>
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {/* New Folder */}
@@ -171,17 +238,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             triggerClassName="min-w-[100px] h-9"
             align="end"
           />
-          <button
-            onClick={() => setOrderBy(orderBy, !orderReverse)}
-            title={orderReverse ? (t('home.toolbar.sort_desc') || '降序') : (t('home.toolbar.sort_asc') || '升序')}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 shadow-xs hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white transition-all cursor-pointer"
+          <Tooltip
+            content={orderReverse ? (t('home.toolbar.sort_desc') || '降序') : (t('home.toolbar.sort_asc') || '升序')}
+            side="top"
           >
-            <ArrowUp
-              className={`h-4 w-4 transition-transform duration-200 ${
-                orderReverse ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'
-              }`}
-            />
-          </button>
+            <button
+              onClick={() => setOrderBy(orderBy, !orderReverse)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 shadow-xs hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white transition-all cursor-pointer"
+            >
+              <ArrowUp
+                className={`h-4 w-4 transition-transform duration-200 ${
+                  orderReverse ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'
+                }`}
+              />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -263,71 +334,77 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
             {/* Batch Rename */}
             {write && (
-              <button
-                onClick={() => onOpenBatchRename(selectedObjs)}
-                title={t('home.toolbar.batch_rename') || 'Batch Rename'}
-                className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-              >
-                <FileCode className="h-4 w-4" />
-              </button>
+              <Tooltip content={t('home.toolbar.batch_rename') || '批量重命名'} side="top">
+                <button
+                  onClick={() => onOpenBatchRename(selectedObjs)}
+                  className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <FileCode className="h-4 w-4" />
+                </button>
+              </Tooltip>
             )}
 
             {/* Copy */}
             {write && (
-              <button
-                onClick={() => onOpenCopyMove(selectedObjs, 'copy')}
-                title={t('home.toolbar.copy') || 'Copy to...'}
-                className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-              >
-                <FolderInput className="h-4 w-4" />
-              </button>
+              <Tooltip content={t('home.toolbar.copy') || '复制到...'} side="top">
+                <button
+                  onClick={() => onOpenCopyMove(selectedObjs, 'copy')}
+                  className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <FolderInput className="h-4 w-4" />
+                </button>
+              </Tooltip>
             )}
 
             {/* Move */}
             {write && (
-              <button
-                onClick={() => onOpenCopyMove(selectedObjs, 'move')}
-                title={t('home.toolbar.move') || 'Move to...'}
-                className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-              >
-                <FolderOutput className="h-4 w-4" />
-              </button>
+              <Tooltip content={t('home.toolbar.move') || '移动到...'} side="top">
+                <button
+                  onClick={() => onOpenCopyMove(selectedObjs, 'move')}
+                  className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <FolderOutput className="h-4 w-4" />
+                </button>
+              </Tooltip>
             )}
 
             {/* Rename single */}
             {write && selectedObjs.length === 1 && (
-              <button
-                onClick={() => onOpenRename(selectedObjs[0])}
-                title={t('home.toolbar.rename') || 'Rename'}
-                className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-              >
-                <Edit2 className="h-4 w-4" />
-              </button>
+              <Tooltip content={t('home.toolbar.rename') || '重命名'} side="top">
+                <button
+                  onClick={() => onOpenRename(selectedObjs[0])}
+                  className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             )}
 
             {/* Delete */}
             {write && (
-              <button
-                onClick={() => onOpenDelete(selectedObjs)}
-                title={t('home.toolbar.delete') || 'Delete'}
-                className="rounded-full p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <Tooltip content={t('home.toolbar.delete') || '删除'} side="top">
+                <button
+                  onClick={() => onOpenDelete(selectedObjs)}
+                  className="rounded-full p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             )}
 
             {/* Close / Deselect All Button */}
             <div className="border-l border-slate-200 pl-1 dark:border-slate-700 ml-1">
-              <button
-                onClick={() => {
-                  setDownloadMenuOpen(false)
-                  clearSelection()
-                }}
-                title={t('home.toolbar.cancel_select') || 'Clear selection'}
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <Tooltip content={t('home.toolbar.cancel_select') || '取消选择'} side="top">
+                <button
+                  onClick={() => {
+                    setDownloadMenuOpen(false)
+                    clearSelection()
+                  }}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>

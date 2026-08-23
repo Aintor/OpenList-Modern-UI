@@ -12,6 +12,7 @@ import { r } from '~/utils/request'
 import { Obj, StoreObj, Resp } from '~/types'
 import { notify } from '~/utils/notify'
 import { useObjStore } from '~/store/useObjStore'
+import { SmartPath } from '~/components/ui/SmartPath'
 import { useT } from '~/lang'
 
 interface CopyMoveModalProps {
@@ -118,8 +119,14 @@ export const CopyMoveModal: React.FC<CopyMoveModalProps> = ({
   const Icon = isCopy ? FolderOutput : FolderInput
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden transition-all dark:border-slate-800 dark:bg-slate-900">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative flex max-h-[85vh] w-full max-w-lg flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden transition-all dark:border-slate-800 dark:bg-slate-900"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div className="flex items-center space-x-3">
@@ -152,17 +159,17 @@ export const CopyMoveModal: React.FC<CopyMoveModalProps> = ({
 
         {/* Current Destination Bar */}
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-2.5 dark:border-slate-800 dark:bg-slate-800/40">
-          <div className="flex items-center space-x-2 overflow-hidden">
+          <div className="flex items-center space-x-2 overflow-hidden flex-1 min-w-0">
             <button
               onClick={handleGoUp}
               disabled={destPath === '/'}
-              className="rounded-lg p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:opacity-30 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
+              className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:opacity-30 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <span className="truncate font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
-              {destPath}
-            </span>
+            <div className="flex-1 min-w-0">
+              <SmartPath path={destPath} className="text-xs font-mono font-semibold" />
+            </div>
           </div>
         </div>
 

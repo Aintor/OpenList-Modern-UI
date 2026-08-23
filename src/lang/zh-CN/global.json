@@ -19,7 +19,7 @@
   "choose": "选择",
   "confirm": "确认",
   "cancel": "取消",
-  "delete_confirm": "确定要删除【{{name}}】吗？",
+  "delete_confirm": "确定要删除 {{name}} 吗？",
   "operations": "操作",
   "yes": "是",
   "no": "否",

@@ -19,7 +19,7 @@
   "choose": "Choose",
   "confirm": "Confirm",
   "cancel": "Cancel",
-  "delete_confirm": "Are you sure you want to delete [{{name}}]?",
+  "delete_confirm": "Are you sure you want to delete {{name}}?",
   "operations": "Operations",
   "yes": "Yes",
   "no": "No",

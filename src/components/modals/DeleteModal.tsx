@@ -42,8 +42,14 @@ export const DeleteModal: React.FC<DeleteModalProps> = ({ targets, isOpen, onClo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900"
+      >
         <button
           onClick={onClose}
           className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
@@ -51,15 +57,15 @@ export const DeleteModal: React.FC<DeleteModalProps> = ({ targets, isOpen, onClo
           <X className="h-5 w-5" />
         </button>
 
-        <div className="mb-5 flex items-center space-x-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400">
+        <div className="mb-5 flex items-center space-x-3 pr-8">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400">
             <AlertTriangle className="h-5 w-5" />
           </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
               {t('home.toolbar.delete') || 'Delete Items'}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
               {t('home.toolbar.delete-tips') || 'Are you sure you want to delete the selected items?'}
             </p>
           </div>

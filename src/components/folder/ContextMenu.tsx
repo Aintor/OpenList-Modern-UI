@@ -11,11 +11,19 @@ import {
   Share2,
   CheckSquare,
   Archive,
+  FolderPlus,
+  UploadCloud,
+  FolderUp,
+  DownloadCloud,
+  RotateCw,
+  LayoutGrid,
+  List as ListIcon,
 } from 'lucide-react'
 import { StoreObj } from '~/types'
 import { useT } from '~/lang'
 import { useDownload } from '~/hooks/useDownload'
 import { useObjStore } from '~/store/useObjStore'
+import { useSettingsStore } from '~/store/useSettingsStore'
 import { copyDirectLink } from '~/utils/link'
 
 interface ContextMenuProps {
@@ -30,6 +38,14 @@ interface ContextMenuProps {
   onShare: (obj: StoreObj) => void
   onCopyMove: (objs: StoreObj[], action: 'copy' | 'move') => void
   onPackageDownload?: (objs: StoreObj[]) => void
+  // Blank area actions
+  onOpenMkdir?: () => void
+  onUploadFiles?: () => void
+  onUploadFolder?: () => void
+  onOpenOfflineDownload?: () => void
+  onSelectAll?: () => void
+  onRefresh?: () => void
+  onToggleLayout?: () => void
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -44,15 +60,24 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onShare,
   onCopyMove,
   onPackageDownload,
+  onOpenMkdir,
+  onUploadFiles,
+  onUploadFolder,
+  onOpenOfflineDownload,
+  onSelectAll,
+  onRefresh,
+  onToggleLayout,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null)
   const t = useT()
   const { downloadObj, batchDownload } = useDownload()
-  const { currentPath, write } = useObjStore()
+  const { currentPath, write, objs: storeObjs } = useObjStore()
+  const { layout } = useSettingsStore()
 
   const isShare = currentPath.startsWith('/@s') || currentPath.startsWith('/@share')
   const isMultiple = objs.length > 1
   const targets = isMultiple ? objs : (obj ? [obj] : [])
+  const isBlank = !obj && objs.length === 0
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -70,11 +95,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     }
   }, [onClose])
 
-  if (!position || targets.length === 0) return null
+  if (!position) return null
 
   // Ensure menu stays within viewport bounds
-  const x = Math.min(position.x, window.innerWidth - 220)
-  const y = Math.min(position.y, window.innerHeight - 420)
+  const x = Math.min(position.x, window.innerWidth - 230)
+  const y = Math.min(position.y, window.innerHeight - 440)
 
   const handleCopyLink = async () => {
     if (obj && !obj.is_dir) {
@@ -99,20 +124,157 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     onClose()
   }
 
+  const currentFolderDisplayName =
+    currentPath === '/'
+      ? (t('home.toolbar.root_dir') || '根目录')
+      : currentPath.split('/').filter(Boolean).pop() || currentPath
+
+  // 1. Blank Area Context Menu (When right-clicking on empty background)
+  if (isBlank) {
+    return (
+      <div
+        ref={menuRef}
+        style={{ top: `${y}px`, left: `${x}px` }}
+        className="fixed z-50 w-52 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 dark:border-slate-800 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 select-none"
+      >
+        {/* Header showing Current Directory */}
+        <div className="px-2.5 py-1.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 truncate border-b border-slate-100 dark:border-slate-800 mb-1 flex items-center space-x-1.5">
+          <FolderOpen className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+          <span className="truncate">{currentFolderDisplayName}</span>
+        </div>
+
+        {/* Directory Write Actions */}
+        {write && (
+          <>
+            {onOpenMkdir && (
+              <button
+                onClick={() => {
+                  onOpenMkdir()
+                  onClose()
+                }}
+                className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer"
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+                <span>{t('home.toolbar.mkdir') || '新建文件夹'}</span>
+              </button>
+            )}
+
+            {onUploadFiles && (
+              <button
+                onClick={() => {
+                  onUploadFiles()
+                  onClose()
+                }}
+                className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+              >
+                <UploadCloud className="h-3.5 w-3.5" />
+                <span>{t('home.toolbar.upload_file') || '上传文件'}</span>
+              </button>
+            )}
+
+            {onUploadFolder && (
+              <button
+                onClick={() => {
+                  onUploadFolder()
+                  onClose()
+                }}
+                className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+              >
+                <FolderUp className="h-3.5 w-3.5" />
+                <span>{t('home.toolbar.upload_folder') || '上传文件夹'}</span>
+              </button>
+            )}
+
+            {onOpenOfflineDownload && (
+              <button
+                onClick={() => {
+                  onOpenOfflineDownload()
+                  onClose()
+                }}
+                className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+              >
+                <DownloadCloud className="h-3.5 w-3.5 text-indigo-500" />
+                <span>{t('home.toolbar.offline_download') || '离线下载'}</span>
+              </button>
+            )}
+
+            <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+          </>
+        )}
+
+        {/* General Exploration Actions */}
+        {storeObjs.length > 0 && onSelectAll && (
+          <button
+            onClick={() => {
+              onSelectAll()
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            <CheckSquare className="h-3.5 w-3.5" />
+            <span>{t('home.toolbar.select_all') || '全选所有'}</span>
+          </button>
+        )}
+
+        {onToggleLayout && (
+          <button
+            onClick={() => {
+              onToggleLayout()
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            {layout === 'grid' ? (
+              <>
+                <ListIcon className="h-3.5 w-3.5" />
+                <span>{t('home.toolbar.list_view') || '切换为列表视图'}</span>
+              </>
+            ) : (
+              <>
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span>{t('home.toolbar.grid_view') || '切换为网格视图'}</span>
+              </>
+            )}
+          </button>
+        )}
+
+        {onRefresh && (
+          <button
+            onClick={() => {
+              onRefresh()
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            <RotateCw className="h-3.5 w-3.5" />
+            <span>{t('home.toolbar.refresh') || '刷新'}</span>
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // 2. Item Selected Context Menu (Single or Multiple items selected)
+  if (targets.length === 0) return null
   const hasDir = targets.some((o) => o.is_dir)
 
   return (
     <div
       ref={menuRef}
       style={{ top: `${y}px`, left: `${x}px` }}
-      className="fixed z-50 w-52 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 dark:border-slate-800 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200"
+      className="fixed z-50 w-52 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 dark:border-slate-800 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 select-none"
     >
       {/* Header showing Single Item name or Multi-Select count */}
       <div className="px-2.5 py-1.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 truncate border-b border-slate-100 dark:border-slate-800 mb-1 flex items-center justify-between">
         {isMultiple ? (
           <span className="flex items-center space-x-1.5 text-indigo-600 dark:text-indigo-400 font-semibold">
             <CheckSquare className="h-3.5 w-3.5" />
-            <span>{targets.length} {t('home.toolbar.offline_download_enhanced.files_count') ? '个已选项目' : 'items selected'}</span>
+            <span>
+              {targets.length}{' '}
+              {t('home.toolbar.offline_download_enhanced.files_count')
+                ? '个已选项目'
+                : 'items selected'}
+            </span>
           </span>
         ) : (
           <span className="truncate">{obj?.name}</span>
@@ -129,7 +291,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-400 transition-colors cursor-pointer"
         >
           {obj.is_dir ? <FolderOpen className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          <span>{obj.is_dir ? (t('home.toolbar.mkdir') ? '打开文件夹' : 'Open') : (t('home.toolbar.preview_page') || 'Preview')}</span>
+          <span>
+            {obj.is_dir
+              ? t('home.toolbar.mkdir')
+                ? '打开文件夹'
+                : 'Open'
+              : t('home.toolbar.preview_page') || 'Preview'}
+          </span>
         </button>
       )}
 
@@ -140,7 +308,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer"
         >
           <Download className="h-3.5 w-3.5" />
-          <span>{isMultiple ? (t('home.toolbar.batch_download') || 'Batch Download') : (t('home.preview.download') || 'Download')}</span>
+          <span>
+            {isMultiple
+              ? t('home.toolbar.batch_download') || 'Batch Download'
+              : t('home.preview.download') || 'Download'}
+          </span>
         </button>
       )}
 
@@ -193,7 +365,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
           >
             <FolderOutput className="h-3.5 w-3.5" />
-            <span>{isMultiple ? (t('home.toolbar.batch_copy') ? `复制 ${targets.length} 项到...` : `Copy ${targets.length} items to...`) : (t('home.toolbar.copy') || 'Copy to...')}</span>
+            <span>
+              {isMultiple
+                ? t('home.toolbar.batch_copy')
+                  ? `复制 ${targets.length} 项到...`
+                  : `Copy ${targets.length} items to...`
+                : t('home.toolbar.copy') || 'Copy to...'}
+            </span>
           </button>
 
           {/* Move to... */}
@@ -205,7 +383,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
           >
             <FolderInput className="h-3.5 w-3.5" />
-            <span>{isMultiple ? (t('home.toolbar.batch_move') ? `移动 ${targets.length} 项到...` : `Move ${targets.length} items to...`) : (t('home.toolbar.move') || 'Move to...')}</span>
+            <span>
+              {isMultiple
+                ? t('home.toolbar.batch_move')
+                  ? `移动 ${targets.length} 项到...`
+                  : `Move ${targets.length} items to...`
+                : t('home.toolbar.move') || 'Move to...'}
+            </span>
           </button>
 
           {/* Rename (Single) / Batch Rename (Multiple) */}
@@ -248,7 +432,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            <span>{isMultiple ? (t('home.toolbar.batch_delete') ? `删除已选 (${targets.length})` : `Delete (${targets.length})`) : (t('home.toolbar.delete') || 'Delete')}</span>
+            <span>
+              {isMultiple
+                ? t('home.toolbar.batch_delete')
+                  ? `删除已选 (${targets.length})`
+                  : `Delete (${targets.length})`
+                : t('home.toolbar.delete') || 'Delete'}
+            </span>
           </button>
         </>
       )}

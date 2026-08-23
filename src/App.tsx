@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Header } from '~/components/layout/Header'
 import { Sidebar } from '~/components/layout/Sidebar'
 import { Toolbar } from '~/components/toolbar/Toolbar'
@@ -24,8 +24,11 @@ import { useObjStore } from '~/store/useObjStore'
 import { useSettingsStore } from '~/store/useSettingsStore'
 import { useUserStore } from '~/store/useUserStore'
 import { useTransferStore } from '~/store/useTransferStore'
+import { extractDroppedFiles } from '~/utils/upload'
 import { useT } from '~/lang'
 import { StoreObj, Obj, ObjType } from '~/types'
+import { GlobalAudioPlayer } from '~/components/player/GlobalAudioPlayer'
+import { useAudioPlayerStore, isAudioFile } from '~/store/useAudioPlayerStore'
 import { Toaster } from 'sonner'
 import { Loader2, FolderOpen, UploadCloud } from 'lucide-react'
 
@@ -39,10 +42,21 @@ export function App() {
     fetchPath,
     getSelectedObjs,
     selectIndex,
+    selectAll,
   } = useObjStore()
-  const { layout, searchKeywords, fetchSettings } = useSettingsStore()
+  const { layout, setLayout, searchKeywords, fetchSettings } = useSettingsStore()
   const { user, initialized, fetchUser } = useUserStore()
   const t = useT()
+
+  const blankFileInputRef = useRef<HTMLInputElement>(null)
+  const blankFolderInputRef = useRef<HTMLInputElement>(null)
+
+  const handleBlankFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return
+    const files = Array.from(e.target.files)
+    useTransferStore.getState().addUploadFiles(files, currentPath, password)
+    e.target.value = ''
+  }
 
   // Manage view toggle
   const [isManageOpen, setIsManageOpen] = useState(false)
@@ -68,7 +82,6 @@ export function App() {
   const [contextPos, setContextPos] = useState<{ x: number; y: number } | null>(null)
 
   // Drag & drop state
-  const { addFiles } = useTransferStore()
   const [isDraggingOver, setIsDraggingOver] = useState(false)
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -86,12 +99,15 @@ export function App() {
     setIsDraggingOver(false)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDraggingOver(false)
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      addFiles(Array.from(e.dataTransfer.files), currentPath, password)
+    if (e.dataTransfer) {
+      const files = await extractDroppedFiles(e.dataTransfer)
+      if (files.length > 0) {
+        useTransferStore.getState().addUploadFiles(files, currentPath, password)
+      }
     }
   }
 
@@ -146,10 +162,8 @@ export function App() {
     if (searchKeywords && !obj.name.toLowerCase().includes(searchKeywords.toLowerCase())) {
       return false
     }
-    if (typeFilter !== undefined && !obj.is_dir && obj.type !== typeFilter) {
-      return false
-    }
-    return true
+    return !(typeFilter !== undefined && !obj.is_dir && obj.type !== typeFilter);
+
   })
 
   const handleOpenObj = (obj: StoreObj) => {
@@ -157,6 +171,8 @@ export function App() {
       const newPath = (currentPath.endsWith('/') ? currentPath : currentPath + '/') + obj.name
       window.history.pushState(null, '', encodeURI(newPath))
       fetchPath(newPath)
+    } else if (isAudioFile(obj)) {
+      useAudioPlayerStore.getState().playTrack(obj, currentPath, objs)
     } else {
       setPreviewTarget(obj)
     }
@@ -182,6 +198,14 @@ export function App() {
       setContextObj(clickedObj)
       setContextObjs([clickedObj])
     }
+    setContextPos({ x: e.clientX, y: e.clientY })
+  }
+
+  const handleBlankContextMenu = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.viselect-item')) return
+    e.preventDefault()
+    setContextObj(null)
+    setContextObjs([])
     setContextPos({ x: e.clientX, y: e.clientY })
   }
 
@@ -234,7 +258,28 @@ export function App() {
             />
 
             {/* Right Main Explorer Content */}
-            <main className="relative flex flex-1 flex-col overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <main
+              onContextMenu={handleBlankContextMenu}
+              className="relative flex flex-1 flex-col overflow-y-auto p-4 sm:p-6 lg:p-8"
+            >
+              {/* Hidden File Inputs for Blank Area Context Menu Uploads */}
+              <input
+                type="file"
+                ref={blankFileInputRef}
+                multiple
+                onChange={handleBlankFileUpload}
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={blankFolderInputRef}
+                multiple
+                // @ts-expect-error webkitdirectory is standard for folder picking
+                webkitdirectory=""
+                onChange={handleBlankFileUpload}
+                className="hidden"
+              />
+
               {/* Explorer Action Toolbar */}
               {!needPassword && (
                 <Toolbar
@@ -301,6 +346,13 @@ export function App() {
         onPackageDownload={(objs) =>
           useTransferStore.getState().addPackageTask(objs, currentPath, password)
         }
+        onOpenMkdir={() => setIsMkdirOpen(true)}
+        onUploadFiles={() => blankFileInputRef.current?.click()}
+        onUploadFolder={() => blankFolderInputRef.current?.click()}
+        onOpenOfflineDownload={() => setIsOfflineDownloadOpen(true)}
+        onSelectAll={() => selectAll(true)}
+        onRefresh={() => fetchPath(currentPath)}
+        onToggleLayout={() => setLayout(layout === 'grid' ? 'list' : 'grid')}
       />
 
       {/* Modals & Dialogs */}
@@ -360,8 +412,12 @@ export function App() {
           window.history.pushState(null, '', encodeURI(folderPath))
           fetchPath(folderPath)
         }}
-        onOpenFilePreview={(obj) => {
-          setPreviewTarget(obj)
+        onOpenFilePreview={(obj, parentPath) => {
+          if (isAudioFile(obj)) {
+            useAudioPlayerStore.getState().playTrack(obj, parentPath)
+          } else {
+            setPreviewTarget(obj)
+          }
         }}
       />
 
@@ -371,6 +427,9 @@ export function App() {
         isOpen={previewTarget !== null}
         onClose={() => setPreviewTarget(null)}
       />
+
+      {/* Floating Global Audio Music Player (Apple Music / Vinyl Style) */}
+      <GlobalAudioPlayer />
 
       {/* Floating Transfer Progress Manager (Uploads & Downloads) */}
       <TransferManager />

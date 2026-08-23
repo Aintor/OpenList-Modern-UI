@@ -66,3 +66,64 @@ export const validateFilename = (
 
   return { valid: true }
 }
+
+/**
+ * Smartly formats a directory path with maximum visibility.
+ * Greedily displays as many directory levels as possible within maxTotalLen,
+ * retaining the root level and maximum trailing subfolders with a compact middle ellipsis.
+ */
+export function formatSmartPath(path: string, maxTotalLen = 46): string {
+  if (!path || path === '/') return '/'
+
+  const isAbsolute = path.startsWith('/')
+  const parts = path.split('/').filter(Boolean)
+
+  // 1. If entire path fits, show it in full
+  const fullFormatted = isAbsolute ? `/${parts.join('/')}` : parts.join('/')
+  if (fullFormatted.length <= maxTotalLen) {
+    return fullFormatted
+  }
+
+  // 2. If only one segment
+  if (parts.length <= 1) {
+    const name = parts[0] || ''
+    if (name.length > maxTotalLen) {
+      const half = Math.max(3, Math.floor((maxTotalLen - 5) / 2))
+      const truncated = `${name.slice(0, half)}...${name.slice(-half)}`
+      return isAbsolute ? `/${truncated}` : truncated
+    }
+    return fullFormatted
+  }
+
+  // 3. Greedily pack as many trailing segments as possible
+  const first = parts[0]
+  const trailing: string[] = []
+
+  for (let i = parts.length - 1; i >= 1; i--) {
+    const candidateTrailing = [parts[i], ...trailing]
+    const prefix = isAbsolute ? `/${first}/.../` : `${first}/.../`
+    const candidate = `${prefix}${candidateTrailing.join('/')}`
+
+    if (candidate.length <= maxTotalLen) {
+      trailing.unshift(parts[i])
+    } else {
+      break
+    }
+  }
+
+  if (trailing.length > 0) {
+    const prefix = isAbsolute ? `/${first}/.../` : `${first}/.../`
+    return `${prefix}${trailing.join('/')}`
+  }
+
+  // 4. Fallback if even root + last segment is too long
+  const last = parts[parts.length - 1]
+  const fallback = isAbsolute ? `/.../${last}` : `.../${last}`
+  if (fallback.length <= maxTotalLen) {
+    return fallback
+  }
+
+  const half = Math.max(3, Math.floor((maxTotalLen - 7) / 2))
+  const truncatedLast = `${last.slice(0, half)}...${last.slice(-half)}`
+  return isAbsolute ? `/.../${truncatedLast}` : `.../${truncatedLast}`
+}

@@ -175,6 +175,12 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
     }
   }
 
+  const handleClose = () => {
+    setFileDetail(null)
+    setTextContent(null)
+    onClose()
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative flex max-h-[92vh] w-full max-w-5xl flex-col rounded-3xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden text-slate-100">
@@ -214,7 +220,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
               </>
             )}
             <button
-              onClick={onClose}
+              onClick={handleClose}
               title={t('global.close') || 'Close'}
               className="rounded-xl p-2 text-slate-400 hover:bg-rose-950/60 hover:text-rose-400 transition-colors cursor-pointer"
             >
@@ -228,12 +234,12 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           {loading && !effectiveRawUrl && !isArchive ? (
             <div className="flex flex-col items-center justify-center space-y-3 py-12 text-slate-400">
               <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-              <span className="text-sm font-medium">{t('global.loading') || 'Loading file preview...'}</span>
+              <span className="text-sm font-medium">{t('global.loading') || 'Loading preview...'}</span>
             </div>
           ) : fetchError ? (
-            <div className="flex flex-col items-center justify-center space-y-2 py-12 text-rose-400">
-              <AlertCircle className="h-8 w-8" />
-              <span className="text-sm font-medium">{fetchError}</span>
+            <div className="flex flex-col items-center justify-center space-y-3 py-12 text-rose-400 text-center max-w-md">
+              <AlertCircle className="h-10 w-10 text-rose-500" />
+              <p className="text-sm font-semibold">{fetchError}</p>
             </div>
           ) : (
             <>
@@ -242,17 +248,22 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                 <img
                   src={effectiveRawUrl}
                   alt={obj.name}
-                  className="max-h-[75vh] max-w-full rounded-xl object-contain shadow-md"
+                  className="max-h-[75vh] max-w-full rounded-xl object-contain shadow-md select-none pointer-events-auto"
                 />
               )}
 
               {/* Video.js v10 Modern React Player */}
               {isVideo && effectiveRawUrl && (
-                <div className="relative flex items-center justify-center h-[65vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-black">
+                <div className="relative flex items-center justify-center h-[65vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-black select-none">
                   <VideoPlayer>
                     <I18nProvider locale={locale === 'zh-TW' ? 'zh-TW' : locale === 'en' ? 'en' : 'zh-CN'}>
                       <VideoSkin>
-                        <VideoElement src={effectiveRawUrl} playsInline autoPlay={videoAutoPlay} />
+                        <VideoElement
+                          src={effectiveRawUrl}
+                          playsInline
+                          autoPlay={videoAutoPlay}
+                          disablePictureInPicture={true}
+                        />
                       </VideoSkin>
                     </I18nProvider>
                   </VideoPlayer>
