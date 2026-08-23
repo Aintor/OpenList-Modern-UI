@@ -46,105 +46,192 @@ export const TransferManager: React.FC = () => {
 
   if (!isOpen || tasks.length === 0) return null
 
-  const activeTasks = tasks.filter(
-    (task) =>
-      task.status === 'uploading' ||
-      task.status === 'hashing' ||
-      task.status === 'backending' ||
-      task.status === 'downloading' ||
-      task.status === 'processing'
+  // 1. Upload Task Aggregations
+  const uploadTasks = tasks.filter((t) => t.type === 'upload')
+  const activeUploadTasks = uploadTasks.filter(
+    (t) => t.status === 'uploading' || t.status === 'hashing' || t.status === 'backending'
   )
-  const pausedTasks = tasks.filter((task) => task.status === 'paused')
-  const completedTasks = tasks.filter((task) => task.status === 'success')
-  const totalSpeed = activeTasks.reduce((sum, task) => sum + (task.speed || 0), 0)
-  const isAllDone = activeTasks.length === 0 && pausedTasks.length === 0 && tasks.length > 0
+  const completedUploadTasks = uploadTasks.filter((t) => t.status === 'success')
+  const totalUploadBytes = uploadTasks.reduce((sum, t) => sum + (t.file?.size || t.size || 0), 0)
+  const loadedUploadBytes = uploadTasks.reduce((sum, t) => {
+    if (t.status === 'success') return sum + (t.file?.size || t.size || 0)
+    return sum + (t.loaded || 0)
+  }, 0)
+  const uploadProgress =
+    totalUploadBytes > 0
+      ? Math.min(100, Math.round((loadedUploadBytes / totalUploadBytes) * 100))
+      : completedUploadTasks.length === uploadTasks.length && uploadTasks.length > 0
+      ? 100
+      : 0
+  const uploadSpeed = activeUploadTasks.reduce((sum, t) => sum + (t.speed || 0), 0)
+
+  // 2. Download / Package Task Aggregations
+  const downloadTasks = tasks.filter((t) => t.type === 'download' || t.type === 'package')
+  const activeDownloadTasks = downloadTasks.filter(
+    (t) => t.status === 'downloading' || t.status === 'processing'
+  )
+  const completedDownloadTasks = downloadTasks.filter((t) => t.status === 'success')
+  const totalDownloadBytes = downloadTasks.reduce((sum, t) => sum + (t.size || 0), 0)
+  const loadedDownloadBytes = downloadTasks.reduce((sum, t) => {
+    if (t.status === 'success') return sum + (t.size || 0)
+    return sum + (t.loaded || 0)
+  }, 0)
+  const downloadProgress =
+    totalDownloadBytes > 0
+      ? Math.min(100, Math.round((loadedDownloadBytes / totalDownloadBytes) * 100))
+      : completedDownloadTasks.length === downloadTasks.length && downloadTasks.length > 0
+      ? 100
+      : 0
+  const downloadSpeed = activeDownloadTasks.reduce((sum, t) => sum + (t.speed || 0), 0)
+
+  // 3. Flags
+  const hasUpload = uploadTasks.length > 0
+  const hasDownload = downloadTasks.length > 0
+  const isUploading = activeUploadTasks.length > 0
+  const isDownloading = activeDownloadTasks.length > 0
+  const isAllDone =
+    tasks.length > 0 &&
+    !isUploading &&
+    !isDownloading &&
+    tasks.every((t) => t.status === 'success' || t.status === 'canceled')
+  const completedTasks = tasks.filter((t) => t.status === 'success')
 
   // 1. Minimized Floating Capsule View
   if (isMinimized) {
-    const firstActive = activeTasks[0] || pausedTasks[0] || tasks[0]
     return (
       <div
         onClick={toggleMinimized}
-        className="fixed bottom-6 right-6 z-30 flex items-center space-x-2.5 rounded-2xl border border-slate-200/80 bg-white/90 px-3.5 py-2 shadow-lg shadow-black/5 backdrop-blur-xl transition-all hover:scale-105 dark:border-slate-800/80 dark:bg-slate-900/90 cursor-pointer animate-in fade-in slide-in-from-bottom-3 duration-150"
+        className="fixed bottom-6 right-6 z-30 flex items-center space-x-3 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-2.5 shadow-xl shadow-black/10 backdrop-blur-2xl transition-all hover:scale-105 dark:border-slate-800/80 dark:bg-slate-900/95 cursor-pointer animate-in fade-in slide-in-from-bottom-3 duration-150 select-none"
       >
-        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 shrink-0">
-          {activeTasks.length > 0 ? (
-            firstActive.type === 'package' ? (
-              <Archive className="h-3.5 w-3.5 animate-pulse text-amber-600 dark:text-amber-400" />
-            ) : firstActive.type === 'download' ? (
-              <ArrowDown className="h-3.5 w-3.5 animate-bounce text-blue-600 dark:text-blue-400" />
-            ) : (
-              <ArrowUp className="h-3.5 w-3.5 animate-bounce text-indigo-600 dark:text-indigo-400" />
-            )
-          ) : pausedTasks.length > 0 ? (
-            <Pause className="h-3.5 w-3.5 text-amber-500" />
-          ) : isAllDone ? (
-            <Check className="h-3.5 w-3.5 text-emerald-500" />
-          ) : (
-            <ArrowUpDown className="h-3.5 w-3.5" />
-          )}
-        </div>
+        {isAllDone ? (
+          <div className="flex items-center space-x-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/60 shrink-0">
+              <Check className="h-3.5 w-3.5" />
+            </div>
+            <span>传输完成 ({tasks.length}/{tasks.length})</span>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-3 text-xs">
+            {/* Upload Stats */}
+            {hasUpload && (
+              <div className="flex items-center space-x-1.5">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 shrink-0">
+                  <ArrowUp className={`h-3.5 w-3.5 ${isUploading ? 'animate-bounce' : ''}`} />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">上传</span>
+                    <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">
+                      {uploadProgress}%
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-400 tabular-nums">
+                      ({completedUploadTasks.length}/{uploadTasks.length})
+                    </span>
+                  </div>
+                  {uploadSpeed > 0 && (
+                    <span className="font-mono text-[10px] text-slate-400 tabular-nums -mt-0.5">
+                      {getFileSize(uploadSpeed)}/s
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
-        <div className="flex items-center space-x-2 text-xs font-medium text-slate-800 dark:text-slate-200">
-          <span className="truncate max-w-[140px] font-semibold">{firstActive.name}</span>
-          <span className="font-mono tabular-nums text-indigo-600 dark:text-indigo-400 font-semibold">
-            {firstActive.progress}%
-          </span>
-          {totalSpeed > 0 && (
-            <span className="font-mono tabular-nums text-[11px] text-slate-400">
-              {getFileSize(totalSpeed)}/s
-            </span>
-          )}
-        </div>
+            {/* Divider if both exist */}
+            {hasUpload && hasDownload && (
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+            )}
 
-        <Maximize2 className="h-3 w-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-1" />
+            {/* Download Stats */}
+            {hasDownload && (
+              <div className="flex items-center space-x-1.5">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0">
+                  <ArrowDown className={`h-3.5 w-3.5 ${isDownloading ? 'animate-bounce' : ''}`} />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">下载</span>
+                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+                      {downloadProgress}%
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-400 tabular-nums">
+                      ({completedDownloadTasks.length}/{downloadTasks.length})
+                    </span>
+                  </div>
+                  {downloadSpeed > 0 && (
+                    <span className="font-mono text-[10px] text-slate-400 tabular-nums -mt-0.5">
+                      {getFileSize(downloadSpeed)}/s
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <Maximize2 className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0 ml-1" />
       </div>
     )
   }
 
   // 2. Ultra-Clean Minimalist Panel View
   return (
-    <div className="fixed bottom-6 right-6 z-30 flex w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-xl shadow-black/10 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-900/95 animate-in fade-in slide-in-from-bottom-3 duration-150">
+    <div className="fixed bottom-6 right-6 z-30 flex w-[400px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-xl shadow-black/10 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-900/95 animate-in fade-in slide-in-from-bottom-3 duration-150 select-none">
       {/* Panel Header */}
       <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-slate-100 dark:border-slate-800/80">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 min-w-0">
           <ArrowUpDown className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+          <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
             {t('home.transfer.title') !== 'home.transfer.title'
               ? t('home.transfer.title')
               : '传输列表'}
           </span>
-          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono tabular-nums text-[10px] text-slate-500 dark:bg-slate-800 dark:text-slate-400 font-medium">
+          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-mono tabular-nums text-[10px] text-slate-500 dark:bg-slate-800 dark:text-slate-400 font-medium shrink-0">
             {completedTasks.length}/{tasks.length}
           </span>
-          {totalSpeed > 0 && (
-            <span className="font-mono tabular-nums text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
-              {getFileSize(totalSpeed)}/s
-            </span>
-          )}
         </div>
 
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={toggleMinimized}
-            title={t('global.minimize') || '最小化'}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
-          >
-            <Minimize2 className="h-3.5 w-3.5" />
-          </button>
+        {/* Global Live Transfer Rate Indicators */}
+        <div className="flex items-center space-x-2">
+          {hasUpload && (isUploading || uploadSpeed > 0) && (
+            <span className="flex items-center space-x-1 font-mono text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded-md">
+              <ArrowUp className="h-3 w-3" />
+              <span>{uploadProgress}%</span>
+              <span>·</span>
+              <span>{getFileSize(uploadSpeed)}/s</span>
+            </span>
+          )}
+          {hasDownload && (isDownloading || downloadSpeed > 0) && (
+            <span className="flex items-center space-x-1 font-mono text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded-md">
+              <ArrowDown className="h-3 w-3" />
+              <span>{downloadProgress}%</span>
+              <span>·</span>
+              <span>{getFileSize(downloadSpeed)}/s</span>
+            </span>
+          )}
 
-          <button
-            onClick={() => {
-              if (isAllDone) {
-                clearCompleted()
-              }
-              setOpen(false)
-            }}
-            title={t('global.close') || '关闭'}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex items-center space-x-1 ml-1">
+            <button
+              onClick={toggleMinimized}
+              title={t('global.minimize') || '最小化'}
+              className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              <Minimize2 className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              onClick={() => {
+                if (isAllDone) {
+                  clearCompleted()
+                }
+                setOpen(false)
+              }}
+              title={t('global.close') || '关闭'}
+              className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 

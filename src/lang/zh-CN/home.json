@@ -362,9 +362,25 @@
     "playlist": "播放列表",
     "list_repeat": "列表循环",
     "one_repeat": "单曲循环",
+    "repeat_off": "停止循环",
     "shuffle": "随机播放",
     "minimize": "收起为黑胶胶囊",
     "close": "关闭播放器",
-    "empty_playlist": "播放列表为空"
+    "empty_playlist": "播放列表为空",
+    "clear_playlist": "清空列表",
+    "remove_from_playlist": "从列表中移除",
+    "move_up": "上移",
+    "move_down": "下移",
+    "play_now": "立即播放",
+    "play_all_now": "立即播放全部",
+    "play_next": "下一首播放",
+    "play_next_multiple": "下一首播放已选",
+    "add_to_playlist": "添加到播放列表",
+    "add_to_playlist_multiple": "添加已选到播放列表",
+    "added_to_play_next": "已设为下一首播放",
+    "added_to_playlist": "已添加到播放列表末尾",
+    "volume": "音量",
+    "mute": "静音",
+    "unmute": "取消静音"
   }
 }

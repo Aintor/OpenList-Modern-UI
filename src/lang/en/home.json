@@ -362,9 +362,25 @@
     "playlist": "Playlist",
     "list_repeat": "Repeat List",
     "one_repeat": "Repeat Track",
+    "repeat_off": "Repeat Off",
     "shuffle": "Shuffle",
     "minimize": "Minimize to Disc",
     "close": "Close Player",
-    "empty_playlist": "Playlist is empty"
+    "empty_playlist": "Playlist is empty",
+    "clear_playlist": "Clear Playlist",
+    "remove_from_playlist": "Remove from Playlist",
+    "move_up": "Move Up",
+    "move_down": "Move Down",
+    "play_now": "Play Now",
+    "play_all_now": "Play All Now",
+    "play_next": "Play Next",
+    "play_next_multiple": "Play Selected Next",
+    "add_to_playlist": "Add to Playlist",
+    "add_to_playlist_multiple": "Add Selected to Playlist",
+    "added_to_play_next": "Added to play next",
+    "added_to_playlist": "Added to end of playlist",
+    "volume": "Volume",
+    "mute": "Mute",
+    "unmute": "Unmute"
   }
 }

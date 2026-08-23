@@ -43,7 +43,14 @@ interface ObjState {
   lastCheckedIndex: number
 
   // Actions
-  fetchPath: (path?: string, password?: string, refresh?: boolean, isRetry?: boolean, targetPage?: number) => Promise<void>
+  fetchPath: (
+    path?: string,
+    password?: string,
+    refresh?: boolean,
+    isRetry?: boolean,
+    targetPage?: number,
+    silent?: boolean
+  ) => Promise<void>
   loadMore: () => Promise<void>
   goToPage: (targetPage: number) => Promise<void>
   setPassword: (password: string) => void
@@ -77,7 +84,14 @@ export const useObjStore = create<ObjState>((set, get) => ({
 
   setPassword: (password: string) => set({ password }),
 
-  fetchPath: async (path?: string, pwd?: string, refresh = false, isRetry = false, targetPage = 1) => {
+  fetchPath: async (
+    path?: string,
+    pwd?: string,
+    refresh = false,
+    isRetry = false,
+    targetPage = 1,
+    silent = false
+  ) => {
     const activePath = path !== undefined ? path : get().currentPath
     let cleanPath = '/'
     try {
@@ -101,7 +115,7 @@ export const useObjStore = create<ObjState>((set, get) => ({
       set({ loadingMore: true })
     } else {
       set({
-        loading: true,
+        loading: !silent,
         currentPath: cleanPath,
         password: finalPassword,
         page: targetPage,

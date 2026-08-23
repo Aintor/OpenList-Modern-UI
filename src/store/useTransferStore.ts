@@ -1059,13 +1059,13 @@ async function executeUploadTask(task: TransferTask) {
       ),
     }))
 
-    // Refresh file list if user is viewing target directory
+    // Silently refresh file list if user is viewing target directory
     const currentPath = objStore.currentPath
     if (
       task.targetDir &&
       (currentPath === task.targetDir || currentPath === task.targetDir.replace(/\/$/, ''))
     ) {
-      objStore.fetchPath(objStore.currentPath, objStore.password, true)
+      objStore.fetchPath(objStore.currentPath, objStore.password, true, false, objStore.page, true)
     }
   } catch (err: any) {
     if (abortController.signal.aborted || err?.message === 'Upload canceled') {

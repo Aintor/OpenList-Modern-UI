@@ -18,12 +18,17 @@ import {
   RotateCw,
   LayoutGrid,
   List as ListIcon,
+  Play,
+  ListPlus,
+  ListMusic,
 } from 'lucide-react'
 import { StoreObj } from '~/types'
 import { useT } from '~/lang'
 import { useDownload } from '~/hooks/useDownload'
 import { useObjStore } from '~/store/useObjStore'
 import { useSettingsStore } from '~/store/useSettingsStore'
+import { useAudioPlayerStore, isAudioFile } from '~/store/useAudioPlayerStore'
+import { notify } from '~/utils/notify'
 import { copyDirectLink } from '~/utils/link'
 
 interface ContextMenuProps {
@@ -78,6 +83,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   const isMultiple = objs.length > 1
   const targets = isMultiple ? objs : (obj ? [obj] : [])
   const isBlank = !obj && objs.length === 0
+  const isAllAudio = targets.length > 0 && targets.every((o) => !o.is_dir && isAudioFile(o))
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -281,8 +287,94 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         )}
       </div>
 
-      {/* Single Item: Open/Preview */}
-      {!isMultiple && obj && (
+      {/* Audio Actions for Single Track */}
+      {!isMultiple && obj && isAudioFile(obj) ? (
+        <>
+          {/* Play Now */}
+          <button
+            onClick={() => {
+              useAudioPlayerStore.getState().playTrack(obj, currentPath, storeObjs)
+              useAudioPlayerStore.getState().setExpanded(true)
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer"
+          >
+            <Play className="h-3.5 w-3.5 fill-current" />
+            <span>{t('home.player.play_now') || '立即播放'}</span>
+          </button>
+
+          {/* Play Next (Insert) */}
+          <button
+            onClick={() => {
+              useAudioPlayerStore.getState().insertNext([{ obj, path: currentPath }])
+              notify.success(t('home.player.added_to_play_next') || '已设为下一首播放')
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            <ListPlus className="h-3.5 w-3.5 text-indigo-500" />
+            <span>{t('home.player.play_next') || '下一首播放'}</span>
+          </button>
+
+          {/* Add to Playlist */}
+          <button
+            onClick={() => {
+              useAudioPlayerStore.getState().addToPlaylist([{ obj, path: currentPath }])
+              notify.success(t('home.player.added_to_playlist') || '已添加到播放列表末尾')
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            <ListMusic className="h-3.5 w-3.5 text-sky-500" />
+            <span>{t('home.player.add_to_playlist') || '添加到播放列表'}</span>
+          </button>
+
+          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+        </>
+      ) : isMultiple && isAllAudio ? (
+        <>
+          {/* Play All Now */}
+          <button
+            onClick={() => {
+              useAudioPlayerStore.getState().playTracks(targets.map((o) => ({ obj: o, path: currentPath })))
+              useAudioPlayerStore.getState().setExpanded(true)
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer"
+          >
+            <Play className="h-3.5 w-3.5 fill-current" />
+            <span>{t('home.player.play_all_now') || '立即播放全部'}</span>
+          </button>
+
+          {/* Play Selected Next */}
+          <button
+            onClick={() => {
+              useAudioPlayerStore.getState().insertNext(targets.map((o) => ({ obj: o, path: currentPath })))
+              notify.success(t('home.player.added_to_play_next') || `已将 ${targets.length} 首歌曲设为下一首播放`)
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            <ListPlus className="h-3.5 w-3.5 text-indigo-500" />
+            <span>{t('home.player.play_next_multiple') || '下一首播放已选'}</span>
+          </button>
+
+          {/* Add All to Playlist */}
+          <button
+            onClick={() => {
+              useAudioPlayerStore.getState().addToPlaylist(targets.map((o) => ({ obj: o, path: currentPath })))
+              notify.success(t('home.player.added_to_playlist') || `已添加 ${targets.length} 首歌曲到播放列表`)
+              onClose()
+            }}
+            className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            <ListMusic className="h-3.5 w-3.5 text-sky-500" />
+            <span>{t('home.player.add_to_playlist_multiple') || '添加已选到播放列表'}</span>
+          </button>
+
+          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+        </>
+      ) : !isMultiple && obj ? (
         <button
           onClick={() => {
             onOpen(obj)
@@ -299,7 +391,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               : t('home.toolbar.preview_page') || 'Preview'}
           </span>
         </button>
-      )}
+      ) : null}
 
       {/* Download (Single File or Batch Files) */}
       {(!isMultiple ? !obj?.is_dir : true) && (

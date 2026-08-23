@@ -9,7 +9,7 @@ export interface AudioTrack {
   rawUrl?: string
 }
 
-export type RepeatMode = 'list' | 'one' | 'shuffle'
+export type RepeatMode = 'list' | 'one' | 'off' | 'shuffle'
 
 const AUDIO_EXTS = ['mp3', 'flac', 'wav', 'aac', 'ogg', 'm4a', 'opus', 'ape', 'wma', 'alac']
 
@@ -36,6 +36,14 @@ interface AudioPlayerState {
 
   // Actions
   playTrack: (obj: Obj, path: string, folderObjs?: Obj[]) => Promise<void>
+  playTracks: (tracks: { obj: Obj; path: string }[]) => Promise<void>
+  insertNext: (tracks: { obj: Obj; path: string }[]) => void
+  addToPlaylist: (tracks: { obj: Obj; path: string }[]) => void
+  removeTrack: (index: number) => void
+  moveTrack: (fromIndex: number, toIndex: number) => void
+  moveTrackUp: (index: number) => void
+  moveTrackDown: (index: number) => void
+  clearPlaylist: () => void
   togglePlay: () => void
   pause: () => void
   resume: () => void
@@ -58,7 +66,7 @@ const savedVolume = (() => {
 
 const savedRepeat = (() => {
   const r = localStorage.getItem('openlist_audio_repeat') as RepeatMode
-  return ['list', 'one', 'shuffle'].includes(r) ? r : 'list'
+  return ['list', 'one', 'off', 'shuffle'].includes(r) ? r : 'list'
 })()
 
 export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => ({
@@ -134,6 +142,153 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => ({
     } catch (e) {
       set({ loading: false })
     }
+  },
+
+  playTracks: async (tracks: { obj: Obj; path: string }[]) => {
+    if (tracks.length === 0) return
+    const first = tracks[0]
+    set({
+      playlist: tracks,
+      currentIndex: 0,
+      activeTrack: first,
+      isPlaying: true,
+      currentTime: 0,
+      duration: 0,
+      loading: true,
+    })
+
+    try {
+      const password = useObjStore.getState().password
+      const fullPath = (first.path.endsWith('/') ? first.path : first.path + '/') + first.obj.name
+      const resp = await fsGet(fullPath, password)
+
+      if (resp.code === 200 && resp.data) {
+        const updatedFirst = {
+          ...first,
+          rawUrl: resp.data.raw_url,
+        }
+        const updatedPlaylist = [...get().playlist]
+        updatedPlaylist[0] = updatedFirst
+
+        set({
+          activeTrack: updatedFirst,
+          playlist: updatedPlaylist,
+          loading: false,
+        })
+      } else {
+        set({ loading: false })
+      }
+    } catch (e) {
+      set({ loading: false })
+    }
+  },
+
+  insertNext: (tracks: { obj: Obj; path: string }[]) => {
+    const { playlist, currentIndex, activeTrack } = get()
+    if (!activeTrack || playlist.length === 0) {
+      get().playTracks(tracks)
+      return
+    }
+
+    const newItems: AudioTrack[] = tracks.map((t) => ({ obj: t.obj, path: t.path }))
+    const updated = [...playlist]
+    const insertPos = currentIndex + 1
+    updated.splice(insertPos, 0, ...newItems)
+
+    set({ playlist: updated })
+  },
+
+  addToPlaylist: (tracks: { obj: Obj; path: string }[]) => {
+    const { playlist, activeTrack } = get()
+    if (!activeTrack || playlist.length === 0) {
+      get().playTracks(tracks)
+      return
+    }
+
+    const newItems: AudioTrack[] = tracks.map((t) => ({ obj: t.obj, path: t.path }))
+    set({ playlist: [...playlist, ...newItems] })
+  },
+
+  removeTrack: (index: number) => {
+    const { playlist, currentIndex, isPlaying } = get()
+    if (index < 0 || index >= playlist.length) return
+
+    const newPlaylist = playlist.filter((_, i) => i !== index)
+
+    if (newPlaylist.length === 0) {
+      get().closePlayer()
+      return
+    }
+
+    if (index === currentIndex) {
+      // Removing the currently playing song
+      const nextIndex = index >= newPlaylist.length ? 0 : index
+      const nextTrackObj = newPlaylist[nextIndex]
+      set({
+        playlist: newPlaylist,
+        currentIndex: nextIndex,
+        activeTrack: nextTrackObj,
+      })
+      if (isPlaying) {
+        get().playTrack(nextTrackObj.obj, nextTrackObj.path, newPlaylist.map((p) => p.obj))
+      }
+    } else if (index < currentIndex) {
+      set({
+        playlist: newPlaylist,
+        currentIndex: currentIndex - 1,
+      })
+    } else {
+      set({ playlist: newPlaylist })
+    }
+  },
+
+  moveTrack: (fromIndex: number, toIndex: number) => {
+    const { playlist, currentIndex } = get()
+    if (
+      fromIndex < 0 ||
+      fromIndex >= playlist.length ||
+      toIndex < 0 ||
+      toIndex >= playlist.length ||
+      fromIndex === toIndex
+    ) {
+      return
+    }
+
+    const updated = [...playlist]
+    const [moved] = updated.splice(fromIndex, 1)
+    updated.splice(toIndex, 0, moved)
+
+    let newCurrentIndex = currentIndex
+    if (fromIndex === currentIndex) {
+      newCurrentIndex = toIndex
+    } else if (fromIndex < currentIndex && toIndex >= currentIndex) {
+      newCurrentIndex = currentIndex - 1
+    } else if (fromIndex > currentIndex && toIndex <= currentIndex) {
+      newCurrentIndex = currentIndex + 1
+    }
+
+    set({
+      playlist: updated,
+      currentIndex: newCurrentIndex,
+      activeTrack: updated[newCurrentIndex] || null,
+    })
+  },
+
+  moveTrackUp: (index: number) => {
+    if (index > 0) {
+      get().moveTrack(index, index - 1)
+    }
+  },
+
+  moveTrackDown: (index: number) => {
+    const { playlist } = get()
+    if (index < playlist.length - 1) {
+      get().moveTrack(index, index + 1)
+    }
+  },
+
+  clearPlaylist: () => {
+    get().closePlayer()
   },
 
   togglePlay: () => {
