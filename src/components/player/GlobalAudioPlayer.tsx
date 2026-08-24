@@ -611,17 +611,20 @@ export const GlobalAudioPlayer: React.FC = () => {
                       <GripVertical className="h-3.5 w-3.5" />
                     </div>
 
-                    {isCurrent && isPlaying ? (
-                      <div className="flex items-end space-x-0.5 h-3.5 w-3.5 shrink-0 pb-0.5">
-                        <span className="w-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s] h-full"></span>
-                        <span className="w-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s] h-2/3"></span>
-                        <span className="w-1 bg-indigo-400 rounded-full animate-bounce h-4/5"></span>
+                    {isCurrent && (
+                      <div className="flex items-end space-x-0.5 h-3.5 w-3 shrink-0 pb-0.5">
+                        {isPlaying ? (
+                          <>
+                            <span className="w-0.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s] h-full"></span>
+                            <span className="w-0.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s] h-2/3"></span>
+                            <span className="w-0.5 bg-indigo-400 rounded-full animate-bounce h-4/5"></span>
+                          </>
+                        ) : (
+                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 m-auto"></span>
+                        )}
                       </div>
-                    ) : (
-                      <span className="w-3.5 text-center font-mono text-[10px] text-slate-500 shrink-0">
-                        {idx + 1}
-                      </span>
                     )}
+
                     <span title={track.obj.name} className="truncate block min-w-0 flex-1">
                       {track.obj.name}
                     </span>

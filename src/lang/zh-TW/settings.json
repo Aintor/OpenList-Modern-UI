@@ -71,7 +71,7 @@
     "max_980px": "居中限制最大 980px"
   },
   "home_icon": "首頁圖示",
-  "home_icon-tips": "導覽列與首頁根目錄顯示的 Emoji 或圖示文字",
+  "home_icon-tips": "導覽列與首頁根目錄顯示的圖示",
   "iframe_previews": "iframe 預覽",
   "iframe_previews-tips": "基於 iframe 嵌入渲染的線上文件預覽引擎範本設定（JSON 格式）",
   "ignore_direct_link_params": "忽略直鏈參數",
@@ -196,7 +196,7 @@
   "share_force_proxy": "強制代理分享檔案連結",
   "share_force_proxy-tips": "分享檔案的下載連結是否強制經由伺服端中轉代理以隱藏源位址",
   "share_icon": "分享圖示",
-  "share_icon-tips": "分享連結和頁面頂部展示的 Emoji 或圖示文字",
+  "share_icon-tips": "分享連結和頁面頂部展示的圖示",
   "share_preview": "允許預覽分享檔案",
   "share_preview-tips": "匿名訪客在分享頁面中是否可以線上預覽檔案內容",
   "share_preview_archives_by_default": "分享預設情況下預覽壓縮包",

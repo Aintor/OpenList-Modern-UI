@@ -41,6 +41,8 @@ interface ObjState {
   orderBy: OrderBy
   orderReverse: boolean
   lastCheckedIndex: number
+  notFound: boolean
+  errorMsg: string | null
 
   // Actions
   fetchPath: (
@@ -51,6 +53,7 @@ interface ObjState {
     targetPage?: number,
     silent?: boolean
   ) => Promise<void>
+  clearNotFound: () => void
   loadMore: () => Promise<void>
   goToPage: (targetPage: number) => Promise<void>
   setPassword: (password: string) => void
@@ -81,8 +84,11 @@ export const useObjStore = create<ObjState>((set, get) => ({
   orderBy: 'name',
   orderReverse: false,
   lastCheckedIndex: -1,
+  notFound: false,
+  errorMsg: null,
 
   setPassword: (password: string) => set({ password }),
+  clearNotFound: () => set({ notFound: false, errorMsg: null }),
 
   fetchPath: async (
     path?: string,
@@ -120,6 +126,8 @@ export const useObjStore = create<ObjState>((set, get) => ({
         password: finalPassword,
         page: targetPage,
         pageSize: pagination.size,
+        notFound: false,
+        errorMsg: null,
       })
     }
 
@@ -157,22 +165,46 @@ export const useObjStore = create<ObjState>((set, get) => ({
           loading: false,
           loadingMore: false,
           needPassword: false,
+          notFound: false,
+          errorMsg: null,
           lastCheckedIndex: -1,
         })
       } else if (resp.code === 403) {
-        set({ loading: false, loadingMore: false, needPassword: true, objs: [] })
+        set({ loading: false, loadingMore: false, needPassword: true, notFound: false, errorMsg: null, objs: [] })
         if (isRetry) {
           notify.error(resp.message || 'Wrong password or share code')
         }
       } else {
-        if (resp.code !== 401) {
+        const msg = (resp.message || '').toLowerCase()
+        const isNotFound =
+          resp.code === 404 ||
+          msg.includes('not found') ||
+          msg.includes('no such file') ||
+          msg.includes('failed get storage') ||
+          msg.includes('record not found') ||
+          (cleanPath !== '/' && resp.code !== 401)
+
+        if (!isNotFound && resp.code !== 401) {
           notify.error(resp.message || 'Failed to list directory')
         }
-        set({ loading: false, loadingMore: false, needPassword: false, objs: isIncremental ? get().objs : [] })
+        set({
+          loading: false,
+          loadingMore: false,
+          needPassword: false,
+          notFound: isNotFound,
+          errorMsg: resp.message || 'Path not found',
+          objs: isIncremental ? get().objs : []
+        })
       }
     } catch (err: any) {
       console.error('Fetch path error:', err)
-      set({ loading: false, loadingMore: false })
+      const isNotFound = cleanPath !== '/'
+      set({
+        loading: false,
+        loadingMore: false,
+        notFound: isNotFound,
+        errorMsg: err?.message || 'Network error or path not found'
+      })
     }
   },
 

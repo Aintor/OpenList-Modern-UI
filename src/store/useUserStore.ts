@@ -3,6 +3,7 @@ import { User } from '~/types'
 import { authLogin, me } from '~/utils/api'
 import { changeToken } from '~/utils/request'
 import { notify } from '~/utils/notify'
+import { useI18n, translate } from '~/lang'
 
 export interface LoginResult {
   success: boolean
@@ -30,12 +31,13 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   login: async (username, password, otp) => {
     set({ loading: true })
+    const locale = useI18n.getState().locale
     try {
       const resp = await authLogin(username, password, otp)
       if (resp.code === 200 && resp.data?.token) {
         changeToken(resp.data.token)
         set({ token: resp.data.token, loading: false })
-        notify.success('Login successful')
+        notify.success(translate(locale, 'login.success') || '登录成功')
         // fetch user details
         const meResp = await me()
         if (meResp.code === 200 && meResp.data) {
@@ -51,26 +53,27 @@ export const useUserStore = create<UserState>((set, get) => ({
           msg.includes('totp')
 
         if (isOtpRequired && !otp) {
-          notify.info(resp.message || 'Please enter your 2FA / OTP code')
+          notify.info(resp.message || translate(locale, 'login.otp-tips') || '请输入 2FA / OTP 验证码')
           set({ loading: false })
           return { success: false, needOtp: true, message: resp.message }
         }
 
-        notify.error(resp.message || 'Login failed')
+        notify.error(resp.message || translate(locale, 'login.failed') || '登录失败')
         set({ loading: false })
         return { success: false, message: resp.message }
       }
     } catch (err: any) {
-      notify.error(err.message || 'Login error')
+      notify.error(err.message || '登录异常')
       set({ loading: false })
       return { success: false, message: err.message }
     }
   },
 
   logout: () => {
+    const locale = useI18n.getState().locale
     changeToken(undefined)
     set({ user: null, token: null })
-    notify.info('Logged out')
+    notify.info(translate(locale, 'manage.logout_success') || '登出成功')
     get().fetchUser()
   },
 

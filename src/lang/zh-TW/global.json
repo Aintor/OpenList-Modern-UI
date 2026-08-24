@@ -54,5 +54,10 @@
     "audio": "音訊",
     "doc": "文件"
   },
-  "readonly": "唯讀"
+  "readonly": "唯讀",
+  "not_found": {
+    "title": "資料夾不存在",
+    "subtitle": "請檢查存取路徑或返回首頁",
+    "go_home": "返回首頁"
+  }
 }

@@ -71,7 +71,7 @@
     "max_980px": "Centered Max 980px"
   },
   "home_icon": "Home Icon",
-  "home_icon-tips": "Emoji or icon text displayed next to root folder in navigation",
+  "home_icon-tips": "Icon displayed next to root folder in navigation",
   "iframe_previews": "iframe Previews",
   "iframe_previews-tips": "JSON configuration for iframe-embedded online document preview engines",
   "ignore_direct_link_params": "Ignore Direct Link Params",
@@ -196,7 +196,7 @@
   "share_force_proxy": "Force Proxy Share Links",
   "share_force_proxy-tips": "Force proxy share downloads through server to obscure raw storage URLs",
   "share_icon": "Share Icon",
-  "share_icon-tips": "Emoji or icon text displayed on share links and pages",
+  "share_icon-tips": "Icon displayed on share links and pages",
   "share_preview": "Allow Share Preview",
   "share_preview-tips": "Allow anonymous visitors to preview shared documents, media, and images",
   "share_preview_archives_by_default": "Share Preview Archives by Default",

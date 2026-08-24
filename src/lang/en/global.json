@@ -54,5 +54,10 @@
     "audio": "Audio",
     "doc": "Documents"
   },
-  "readonly": "Read Only"
+  "readonly": "Read Only",
+  "not_found": {
+    "title": "Directory Not Found",
+    "subtitle": "Please check the path or return to home",
+    "go_home": "Return to Home"
+  }
 }

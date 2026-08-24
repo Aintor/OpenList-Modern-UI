@@ -20,16 +20,18 @@ import { useTransferStore } from '~/store/useTransferStore'
 import { useI18n, useT, languages, Locale } from '~/lang'
 import { CustomSelect } from '~/components/ui/CustomSelect'
 import { Tooltip } from '~/components/ui/Tooltip'
+import { DynamicIcon } from '~/components/ui/DynamicIcon'
+import { UserMethods } from '~/types'
 
 interface HeaderProps {
-  onOpenLoginModal: () => void
+  onGoToLogin: () => void
   onToggleManage: () => void
   onOpenSearchModal: () => void
   isManageOpen: boolean
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  onOpenLoginModal,
+  onGoToLogin,
   onToggleManage,
   onOpenSearchModal,
   isManageOpen,
@@ -103,6 +105,8 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [currentPath])
 
+  const isGuest = UserMethods.is_guest(user)
+
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 sm:px-6 backdrop-blur-md transition-colors dark:border-slate-800/80 dark:bg-slate-950/80 select-none">
       {/* Left: Dynamic Logo & Overflow-Protected Breadcrumb Bar */}
@@ -146,12 +150,20 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {isShare ? (
                   <>
-                    <Share2 className="h-3.5 w-3.5 text-indigo-500" />
+                    <DynamicIcon
+                      name={getSetting('share_icon') || 'share-2'}
+                      fallback={Share2}
+                      className="h-3.5 w-3.5 text-indigo-500"
+                    />
                     <span>{t('manage.sidemenu.shares') || 'Shares'}</span>
                   </>
                 ) : (
                   <>
-                    <FolderTree className="h-3.5 w-3.5" />
+                    <DynamicIcon
+                      name={getSetting('home_icon') || 'folder-tree'}
+                      fallback={FolderTree}
+                      className="h-3.5 w-3.5"
+                    />
                     <span>{t('global.root') || 'Root'}</span>
                   </>
                 )}
@@ -271,8 +283,8 @@ export const Header: React.FC<HeaderProps> = ({
           triggerClassName="h-8 text-xs font-semibold px-2.5 bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
         />
 
-        {/* Manage Admin Navigation Button (Hidden on Share Pages) */}
-        {!isShare && (
+        {/* Manage Admin Navigation Button (Only shown for non-guest authenticated users) */}
+        {!isShare && !isGuest && (
           <button
             onClick={onToggleManage}
             title={t('home.footer.manage') || 'Management'}
@@ -287,9 +299,16 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* User Logout Button / Login Button (Hidden on Share Pages) */}
+        {/* User Login (for Guest) or Logout Button (for authenticated users) */}
         {!isShare && (
-          user ? (
+          isGuest ? (
+            <button
+              onClick={onGoToLogin}
+              className="rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
+            >
+              {t('login.login') || 'Sign In'}
+            </button>
+          ) : (
             <Tooltip content={t('home.toolbar.logout') || 'Logout'} side="bottom">
               <button
                 onClick={logout}
@@ -298,13 +317,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <LogOut className="h-4 w-4" />
               </button>
             </Tooltip>
-          ) : (
-            <button
-              onClick={onOpenLoginModal}
-              className="rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
-            >
-              {t('login.login') || 'Sign In'}
-            </button>
           )
         )}
       </div>

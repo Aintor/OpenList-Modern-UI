@@ -4,11 +4,13 @@ import { useObjStore } from '~/store/useObjStore'
 import { useUserStore } from '~/store/useUserStore'
 import { useT } from '~/lang'
 
+import { UserMethods } from '~/types'
+
 interface PasswordPromptProps {
-  onOpenLoginModal?: () => void
+  onGoToLogin?: () => void
 }
 
-export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onOpenLoginModal }) => {
+export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onGoToLogin }) => {
   const { currentPath, loading, fetchPath } = useObjStore()
   const { user } = useUserStore()
   const t = useT()
@@ -71,13 +73,13 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onOpenLoginModal
           </button>
         </form>
 
-        {!isShare && !user && onOpenLoginModal && (
+        {!isShare && UserMethods.is_guest(user) && onGoToLogin && (
           <div className="mt-6 border-t border-slate-100 pt-4 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
             <span>{t('global.have_account') || 'Already have an account?'}</span>{' '}
             <button
               type="button"
-              onClick={onOpenLoginModal}
-              className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+              onClick={onGoToLogin}
+              className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400 cursor-pointer"
             >
               {t('global.go_login') || 'Go to login'}
             </button>

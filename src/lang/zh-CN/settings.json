@@ -71,7 +71,7 @@
     "max_980px": "居中限制最大 980px"
   },
   "home_icon": "主页图标",
-  "home_icon-tips": "导航栏与主页根目录显示的 Emoji 或图标文本",
+  "home_icon-tips": "导航栏与主页根目录显示的图标",
   "iframe_previews": "iframe 预览",
   "iframe_previews-tips": "基于 iframe 嵌入渲染的在线文档预览引擎模板配置（JSON 格式）",
   "ignore_direct_link_params": "忽略直链参数",
@@ -196,7 +196,7 @@
   "share_force_proxy": "强制代理分享文件链接",
   "share_force_proxy-tips": "分享文件的下载链接是否强制经由服务端中转代理以隐藏源地址",
   "share_icon": "分享图标",
-  "share_icon-tips": "分享链接和页面顶部展示的 Emoji 或图标文本",
+  "share_icon-tips": "分享链接和页面顶部展示的图标",
   "share_preview": "允许预览分享文件",
   "share_preview-tips": "匿名访客在分享页面中是否可以在线预览文件内容",
   "share_preview_archives_by_default": "分享默认情况下预览压缩包",

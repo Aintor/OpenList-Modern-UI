@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { SettingFieldSchema } from '~/config/settings/types'
 import { CustomSelect } from '~/components/ui/CustomSelect'
+import { IconPicker } from '~/components/ui/IconPicker'
 import { useT } from '~/lang'
 import { Eye, EyeOff } from 'lucide-react'
 
@@ -69,6 +70,13 @@ export const SettingItemRenderer: React.FC<SettingItemRendererProps> = ({
               {value === 'true' ? (t('global.enable') || 'Enabled') : (t('global.disable') || 'Disabled')}
             </span>
           </div>
+        ) : field.type === 'icon' ? (
+          <IconPicker
+            value={value || ''}
+            defaultValue={typeof field.defaultValue === 'string' ? field.defaultValue : 'folder-tree'}
+            disabled={isReadOnly}
+            onChange={(val) => onChange(val)}
+          />
         ) : field.type === 'select' ? (
           <CustomSelect
             value={value}

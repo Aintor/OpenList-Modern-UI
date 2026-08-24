@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { Obj, ObjType } from '~/types'
-import { fsGet } from '~/utils/api'
+import { fsGet, fsList } from '~/utils/api'
 import { useObjStore } from '~/store/useObjStore'
 
 export interface AudioTrack {
@@ -84,7 +84,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => ({
   loading: false,
 
   playTrack: async (obj: Obj, path: string, folderObjs?: Obj[]) => {
-    // 1. Build playlist from folder files if available
+    // 1. Build initial playlist immediately from available folder files (0ms delay)
     let playlist: AudioTrack[] = []
     if (folderObjs && folderObjs.length > 0) {
       playlist = folderObjs.filter(isAudioFile).map((o) => ({
@@ -115,27 +115,68 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => ({
       loading: true,
     })
 
-    // Fetch streaming raw_url if needed
+    const password = useObjStore.getState().password
+    const objStoreState = useObjStore.getState()
+    const isPaginated = objStoreState.total > (folderObjs?.length || 0) && objStoreState.currentPath === path
+
+    // 2. If folder has unrendered/paginated items, asynchronously fetch full directory metadata in background
+    if (isPaginated) {
+      fsList(path, password, 1, 0)
+        .then((resp) => {
+          if (resp.code === 200 && resp.data?.content) {
+            const allAudios: AudioTrack[] = resp.data.content.filter(isAudioFile).map((o) => ({
+              obj: o,
+              path,
+            }))
+            if (allAudios.length > 0) {
+              const currentActive = get().activeTrack
+              const newIndex = allAudios.findIndex(
+                (item) => item.obj.name === (currentActive?.obj?.name || obj.name)
+              )
+              if (newIndex !== -1) {
+                if (currentActive?.rawUrl) {
+                  allAudios[newIndex].rawUrl = currentActive.rawUrl
+                }
+                set({
+                  playlist: allAudios,
+                  currentIndex: newIndex,
+                  activeTrack: allAudios[newIndex],
+                })
+              }
+            }
+          }
+        })
+        .catch(() => {
+          // Gracefully keep initial playlist on failure
+        })
+    }
+
+    // 3. Fetch streaming raw_url for current audio file
     try {
-      const password = useObjStore.getState().password
       const fullPath = (path.endsWith('/') ? path : path + '/') + obj.name
       const resp = await fsGet(fullPath, password)
 
       if (resp.code === 200 && resp.data) {
         const rawUrl = resp.data.raw_url
-        const updatedTrack = {
-          ...currentTrack,
-          rawUrl,
+        const currentActive = get().activeTrack
+        if (currentActive && currentActive.obj.name === obj.name) {
+          const updatedTrack = {
+            ...currentActive,
+            rawUrl,
+          }
+
+          const updatedPlaylist = [...get().playlist]
+          const currentIdx = get().currentIndex
+          if (currentIdx >= 0 && currentIdx < updatedPlaylist.length) {
+            updatedPlaylist[currentIdx] = updatedTrack
+          }
+
+          set({
+            activeTrack: updatedTrack,
+            playlist: updatedPlaylist,
+            loading: false,
+          })
         }
-
-        const updatedPlaylist = [...get().playlist]
-        updatedPlaylist[targetIndex] = updatedTrack
-
-        set({
-          activeTrack: updatedTrack,
-          playlist: updatedPlaylist,
-          loading: false,
-        })
       } else {
         set({ loading: false })
       }

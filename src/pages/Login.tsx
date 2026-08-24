@@ -6,10 +6,11 @@ import { useT, useI18n, languages, Locale } from '~/lang'
 import { CustomSelect } from '~/components/ui/CustomSelect'
 
 interface LoginPageProps {
+  onLoginSuccess?: () => void
   onContinueAsGuest?: () => void
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onContinueAsGuest }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onContinueAsGuest }) => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [otp, setOtp] = useState('')
@@ -36,7 +37,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onContinueAsGuest }) => {
     if (!username || !password) return
 
     const res = await login(username, password, showOtp ? otp : undefined)
-    if (!res.success && res.needOtp) {
+    if (res.success) {
+      if (onLoginSuccess) {
+        onLoginSuccess()
+      }
+    } else if (res.needOtp) {
       setShowOtp(true)
     }
   }

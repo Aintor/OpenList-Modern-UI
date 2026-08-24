@@ -10,6 +10,7 @@ export type SettingFieldType =
   | 'code'
   | 'tags'
   | 'folder'
+  | 'icon'
   | 'action_btn'
 
 export interface SettingFieldSchema {

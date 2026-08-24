@@ -9,7 +9,6 @@ import { ContextMenu } from '~/components/folder/ContextMenu'
 import { MkdirModal } from '~/components/modals/MkdirModal'
 import { RenameModal } from '~/components/modals/RenameModal'
 import { DeleteModal } from '~/components/modals/DeleteModal'
-import { LoginModal } from '~/components/modals/LoginModal'
 import { PreviewModal } from '~/components/previews/PreviewModal'
 import { CopyMoveModal } from '~/components/modals/CopyMoveModal'
 import { BatchRenameModal } from '~/components/modals/BatchRenameModal'
@@ -18,6 +17,7 @@ import { OfflineDownloadModal } from '~/components/modals/OfflineDownloadModal'
 import { SearchModal } from '~/components/modals/SearchModal'
 import { TransferManager } from '~/components/modals/TransferManager'
 import { PasswordPrompt } from '~/components/folder/PasswordPrompt'
+import { NotFoundPage } from '~/components/ui/NotFoundPage'
 import { Manage } from '~/pages/manage/Manage'
 import { LoginPage } from '~/pages/Login'
 import { useObjStore } from '~/store/useObjStore'
@@ -26,7 +26,7 @@ import { useUserStore } from '~/store/useUserStore'
 import { useTransferStore } from '~/store/useTransferStore'
 import { extractDroppedFiles } from '~/utils/upload'
 import { useT } from '~/lang'
-import { StoreObj, Obj, ObjType } from '~/types'
+import { StoreObj, Obj, ObjType, UserMethods } from '~/types'
 import { GlobalAudioPlayer } from '~/components/player/GlobalAudioPlayer'
 import { useAudioPlayerStore, isAudioFile } from '~/store/useAudioPlayerStore'
 import { Toaster } from 'sonner'
@@ -39,6 +39,7 @@ export function App() {
     objs,
     loading,
     needPassword,
+    notFound,
     fetchPath,
     getSelectedObjs,
     selectIndex,
@@ -113,6 +114,11 @@ export function App() {
 
   const isShareRoute = window.location.pathname.startsWith('/@s') || window.location.pathname.startsWith('/@share')
 
+  const handleGoToLogin = () => {
+    window.history.pushState(null, '', `/@login?redirect=${encodeURIComponent(currentPath)}`)
+    setIsLoginOpen(true)
+  }
+
   // Initial load settings and user
   useEffect(() => {
     fetchSettings()
@@ -125,18 +131,31 @@ export function App() {
       const rawPath = window.location.pathname && window.location.pathname !== '/'
         ? window.location.pathname
         : '/'
-      fetchPath(rawPath)
+      if (!rawPath.startsWith('/@login')) {
+        fetchPath(rawPath)
+      }
     }
   }, [initialized, user, isShareRoute])
 
   // Listen to browser forward/back buttons
   useEffect(() => {
     const handlePopState = () => {
-      fetchPath(window.location.pathname || '/')
+      const raw = window.location.pathname || '/'
+      if (!raw.startsWith('/@login')) {
+        setIsLoginOpen(false)
+      }
+      fetchPath(raw)
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
+
+  // Auto-exit manage mode if user is guest
+  useEffect(() => {
+    if (UserMethods.is_guest(user) && isManageOpen) {
+      setIsManageOpen(false)
+    }
+  }, [user, isManageOpen])
 
   // 1. Loading state while verifying session / guest
   if (!initialized) {
@@ -147,12 +166,31 @@ export function App() {
     )
   }
 
-  // 2. If neither logged in nor guest is enabled, and not browsing a public share link, show Login Screen quietly
-  if (!user && !isShareRoute) {
+  const isExplicitLoginRoute =
+    window.location.pathname === '/@login' || window.location.pathname.startsWith('/@login')
+  const isLoginActive =
+    (!user && !isShareRoute) ||
+    (isLoginOpen && UserMethods.is_guest(user)) ||
+    (isExplicitLoginRoute && !isShareRoute)
+
+  // 2. Full-page Login view (when unauthenticated, navigating to /@login, or clicking login in guest mode)
+  if (isLoginActive && !isShareRoute) {
     return (
       <>
         <Toaster position="top-center" richColors theme="system" />
-        <LoginPage />
+        <LoginPage
+          onLoginSuccess={() => {
+            setIsLoginOpen(false)
+            const redirect = new URLSearchParams(window.location.search).get('redirect') || '/'
+            window.history.pushState(null, '', redirect)
+            fetchPath(redirect)
+          }}
+          onContinueAsGuest={() => {
+            setIsLoginOpen(false)
+            window.history.pushState(null, '', '/')
+            fetchPath('/')
+          }}
+        />
       </>
     )
   }
@@ -202,6 +240,7 @@ export function App() {
   }
 
   const handleBlankContextMenu = (e: React.MouseEvent) => {
+    if (notFound || needPassword) return
     if ((e.target as HTMLElement).closest('.viselect-item')) return
     e.preventDefault()
     setContextObj(null)
@@ -239,7 +278,7 @@ export function App() {
 
       {/* Top Header */}
       <Header
-        onOpenLoginModal={() => setIsLoginOpen(true)}
+        onGoToLogin={handleGoToLogin}
         onToggleManage={() => setIsManageOpen(!isManageOpen)}
         onOpenSearchModal={() => setIsSearchModalOpen(true)}
         isManageOpen={isManageOpen}
@@ -281,7 +320,7 @@ export function App() {
               />
 
               {/* Explorer Action Toolbar */}
-              {!needPassword && (
+              {!needPassword && !notFound && (
                 <Toolbar
                   onOpenMkdir={() => setIsMkdirOpen(true)}
                   onOpenRename={(obj) => setRenameTarget(obj)}
@@ -296,14 +335,21 @@ export function App() {
               )}
 
               {/* Main Content Area */}
-              <div className="flex-1 min-h-[70vh]">
+              <div className="flex-1">
                 {loading ? (
                   <div className="flex h-64 items-center justify-center space-x-2 text-slate-400">
                     <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
                     <span className="text-sm font-medium">{t('global.loading') || 'Loading files...'}</span>
                   </div>
                 ) : needPassword ? (
-                  <PasswordPrompt onOpenLoginModal={() => setIsLoginOpen(true)} />
+                  <PasswordPrompt onGoToLogin={handleGoToLogin} />
+                ) : notFound ? (
+                  <NotFoundPage
+                    onGoHome={() => {
+                      window.history.pushState(null, '', '/')
+                      fetchPath('/')
+                    }}
+                  />
                 ) : filteredObjs.length === 0 ? (
                   <div className="flex h-64 flex-col items-center justify-center text-slate-400">
                     <FolderOpen className="h-12 w-12 text-slate-300 dark:text-slate-700 mb-2 stroke-[1.5]" />
@@ -324,7 +370,7 @@ export function App() {
                 )}
 
                 {/* Pagination Controls */}
-                <PaginationBar />
+                {!needPassword && !notFound && <PaginationBar />}
               </div>
             </main>
           </>
@@ -398,11 +444,6 @@ export function App() {
       <OfflineDownloadModal
         isOpen={isOfflineDownloadOpen}
         onClose={() => setIsOfflineDownloadOpen(false)}
-      />
-
-      <LoginModal
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
       />
 
       <SearchModal

@@ -54,5 +54,10 @@
     "audio": "音频",
     "doc": "文档"
   },
-  "readonly": "只读"
+  "readonly": "只读",
+  "not_found": {
+    "title": "目录不存在",
+    "subtitle": "请检查访问路径或返回首页",
+    "go_home": "返回首页"
+  }
 }

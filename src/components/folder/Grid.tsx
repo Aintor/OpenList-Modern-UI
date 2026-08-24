@@ -25,7 +25,7 @@ export const Grid: React.FC<GridProps> = ({ objs, onOpen, onContextMenu }) => {
   return (
     <div
       ref={containerRef}
-      className="viselect-container flex-1 min-h-[70vh] pb-64 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 content-start"
+      className="viselect-container flex-1 pb-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 content-start"
     >
       {objs.map((obj, i) => (
         <GridItem

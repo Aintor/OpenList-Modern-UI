@@ -35,39 +35,17 @@
         },
         {
           "key": "home_icon",
-          "type": "text",
+          "type": "icon",
           "labelKey": "settings.home_icon",
           "helpKey": "settings.home_icon-tips",
-          "defaultValue": "🏠"
+          "defaultValue": "folder-tree"
         },
         {
           "key": "share_icon",
-          "type": "text",
+          "type": "icon",
           "labelKey": "settings.share_icon",
           "helpKey": "settings.share_icon-tips",
-          "defaultValue": "🎁"
-        },
-        {
-          "key": "home_container",
-          "type": "select",
-          "labelKey": "settings.home_container",
-          "helpKey": "settings.home_container-tips",
-          "defaultValue": "max_980px",
-          "options": [
-            { "value": "max_980px", "labelKey": "settings.home_containers.max_980px", "label": "居中限制最大 980px" },
-            { "value": "hope_container", "labelKey": "settings.home_containers.hope_container", "label": "全宽流式容器" }
-          ]
-        },
-        {
-          "key": "settings_layout",
-          "type": "select",
-          "labelKey": "settings.settings_layout",
-          "helpKey": "settings.settings_layout-tips",
-          "defaultValue": "list",
-          "options": [
-            { "value": "list", "labelKey": "settings.settings_layouts.list", "label": "单列列表" },
-            { "value": "responsive", "labelKey": "settings.settings_layouts.responsive", "label": "响应式网格" }
-          ]
+          "defaultValue": "share-2"
         },
         {
           "key": "hide_storage_details",

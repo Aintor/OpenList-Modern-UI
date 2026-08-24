@@ -25,22 +25,22 @@ export const List: React.FC<ListProps> = ({ objs, onOpen, onContextMenu }) => {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-[70vh]">
-      {/* Table Header */}
-      <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 border-b border-slate-200/80 dark:border-slate-800/80 mb-1 shrink-0">
+    <div className="flex flex-col flex-1">
+      {/* Table Header with Sort Actions */}
+      <div className="flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-slate-400 border-b border-slate-200/80 dark:border-slate-800/80 select-none mb-1">
         <div
           onClick={() => setOrderBy('name')}
-          className="flex items-center space-x-1.5 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors flex-1"
+          className="flex-1 flex items-center space-x-1 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
         >
           <span>{t('home.obj.name') || 'Name'}</span>
           {orderBy === 'name' && (
-            <span className="text-indigo-500">{orderReverse ? '↓' : '↑'}</span>
+            <span className="text-indigo-500 ml-1">{orderReverse ? '↓' : '↑'}</span>
           )}
         </div>
 
         <div
           onClick={() => setOrderBy('size')}
-          className="w-28 text-right cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+          className="hidden sm:block w-28 text-right cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors mr-4"
         >
           <span>{t('home.obj.size') || 'Size'}</span>
           {orderBy === 'size' && (
@@ -60,7 +60,7 @@ export const List: React.FC<ListProps> = ({ objs, onOpen, onContextMenu }) => {
       </div>
 
       {/* Rows Container spanning full remaining vertical space for drag-select */}
-      <div ref={containerRef} className="viselect-container flex-1 min-h-[60vh] pb-64 space-y-0.5">
+      <div ref={containerRef} className="viselect-container flex-1 pb-6 space-y-0.5">
         {objs.map((obj, i) => (
           <ListItem
             key={obj.name + i}
