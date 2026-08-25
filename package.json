@@ -28,6 +28,7 @@
     "hash-wasm": "^4.12.0",
     "lightgallery": "^2.8.2",
     "lucide-react": "^1.16.0",
+    "music-metadata": "^11.15.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sonner": "^2.0.1",

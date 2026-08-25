@@ -7,6 +7,7 @@ import { useDownload } from '~/hooks/useDownload'
 import { useObjStore } from '~/store/useObjStore'
 import { useT } from '~/lang'
 import { ThumbnailImage } from '~/components/ui/ThumbnailImage'
+import { useAudioCover, isAudioObject } from '~/utils/audioCover'
 
 interface GridItemProps {
   obj: StoreObj
@@ -29,8 +30,13 @@ export const GridItem: React.FC<GridItemProps> = ({
 }) => {
   const isSelected = !!obj.selected
   const hasSelection = useObjStore((state) => state.objs.some((o) => o.selected))
+  const currentPath = useObjStore((state) => state.currentPath)
   const { downloadObj } = useDownload()
   const t = useT()
+
+  const isAudio = isAudioObject(obj)
+  const audioCover = useAudioCover(isAudio && !obj.thumb ? obj : null, currentPath)
+  const effectiveThumb = obj.thumb || audioCover
 
   const handleClick = (e: React.MouseEvent) => {
     if (hasJustFinishedDrag && hasJustFinishedDrag()) {
@@ -112,9 +118,9 @@ export const GridItem: React.FC<GridItemProps> = ({
 
       {/* Middle: Icon or Thumbnail */}
       <div className="flex h-16 sm:h-24 items-center justify-center py-1 sm:py-2">
-        {obj.thumb ? (
+        {effectiveThumb ? (
           <ThumbnailImage
-            src={obj.thumb}
+            src={effectiveThumb}
             alt={obj.name}
             className="max-h-full max-w-full rounded-lg object-contain shadow-xs"
             fallbackIcon={

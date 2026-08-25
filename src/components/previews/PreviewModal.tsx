@@ -24,6 +24,7 @@ import '@videojs/react/audio/skin.css'
 import { VideoPlayer, VideoSkin, Video as VideoElement } from '@videojs/react/video'
 import { AudioPlayer, AudioSkin, Audio as AudioElement } from '@videojs/react/audio'
 import { I18nProvider } from '@videojs/react/i18n'
+import { useAudioCover } from '~/utils/audioCover'
 
 interface PreviewModalProps {
   obj: Obj | null
@@ -57,6 +58,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
     : ''
 
   const targetObj = fileDetail || obj
+  const audioCover = useAudioCover(targetObj, currentPath)
   const ext = targetObj ? targetObj.name.toLowerCase().split('.').pop() || '' : ''
 
   const isVideo =
@@ -273,8 +275,16 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
               {/* Video.js v10 Modern Audio Player */}
               {isAudio && effectiveRawUrl && (
                 <div className="flex flex-col items-center space-y-6 rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl w-full max-w-lg">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-indigo-950/80 text-indigo-400 shadow-inner border border-indigo-500/20">
-                    <Music className="h-12 w-12" />
+                  <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-indigo-950/80 text-indigo-400 shadow-inner border border-indigo-500/20 overflow-hidden">
+                    {audioCover ? (
+                      <img
+                        src={audioCover}
+                        alt={obj.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <Music className="h-12 w-12" />
+                    )}
                   </div>
                   <div className="text-center w-full px-4">
                     <h4 className="font-bold text-slate-100 truncate text-base">{obj.name}</h4>

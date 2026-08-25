@@ -14,6 +14,7 @@ import { notify } from '~/utils/notify'
 import { useObjStore } from '~/store/useObjStore'
 import { SmartPath } from '~/components/ui/SmartPath'
 import { useT } from '~/lang'
+import { useAudioPlayerStore } from '~/store/useAudioPlayerStore'
 
 interface CopyMoveModalProps {
   targets: Obj[]
@@ -103,6 +104,9 @@ export const CopyMoveModal: React.FC<CopyMoveModalProps> = ({
             ? `${names.length} item(s) copied`
             : `${names.length} item(s) moved`
         )
+        if (action === 'move') {
+          useAudioPlayerStore.getState().moveTracks(srcDir, destPath, names)
+        }
         fetchPath(currentPath)
         onClose()
       } else {

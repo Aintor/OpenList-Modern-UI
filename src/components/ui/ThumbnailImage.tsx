@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { MemoryLRUCache } from '~/utils/lru'
 
 interface ThumbnailImageProps {
   src: string
@@ -9,6 +10,9 @@ interface ThumbnailImageProps {
   initialDelay?: number
 }
 
+// Bounded in-memory cache for video/photo thumbnail statuses (up to 500 items, 0 disk footprint)
+const thumbnailStatusCache = new MemoryLRUCache<string, 'loaded' | 'error'>(500)
+
 export const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
   src,
   alt = '',
@@ -17,7 +21,8 @@ export const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
   maxRetries = 3,
   initialDelay = 1000,
 }) => {
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
+  const cachedStatus = src ? thumbnailStatusCache.get(src) : undefined
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>(cachedStatus || 'loading')
   const [retryCount, setRetryCount] = useState(0)
   const [imgSrc, setImgSrc] = useState(src)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -34,7 +39,8 @@ export const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
   // Reset when source prop changes
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    setStatus('loading')
+    const latestStatus = src ? thumbnailStatusCache.get(src) : undefined
+    setStatus(latestStatus || 'loading')
     setRetryCount(0)
     setImgSrc(src)
   }, [src])
@@ -55,13 +61,15 @@ export const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
         setImgSrc(`${src}${separator}_t=${Date.now()}`)
       }, delay)
     } else {
-      // Max retries reached, switch smoothly to graceful fallback icon
+      // Max retries reached, record error in memory LRU and switch smoothly to fallback icon
+      if (src) thumbnailStatusCache.set(src, 'error')
       setStatus('error')
     }
   }
 
   const handleLoad = () => {
     if (!mountedRef.current) return
+    if (src) thumbnailStatusCache.set(src, 'loaded')
     setStatus('loaded')
   }
 

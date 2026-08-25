@@ -6,6 +6,7 @@ import { notify } from '~/utils/notify'
 import { validateFilename } from '~/utils/str'
 import { Obj } from '~/types'
 import { useT } from '~/lang'
+import { useAudioPlayerStore } from '~/store/useAudioPlayerStore'
 
 interface BatchRenameModalProps {
   targets: Obj[]
@@ -72,6 +73,7 @@ export const BatchRenameModal: React.FC<BatchRenameModalProps> = ({
       const resp = await fsBatchRename(currentPath, renameList)
       if (resp.code === 200) {
         notify.success(t('global.save_success') || `Batch renamed ${targets.length} items`)
+        useAudioPlayerStore.getState().batchRenameTracks(currentPath, renameList)
         clearSelection()
         onClose()
         fetchPath(currentPath, '', true)

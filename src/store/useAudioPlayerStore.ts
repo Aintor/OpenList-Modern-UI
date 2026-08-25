@@ -1,7 +1,9 @@
 import { create } from 'zustand'
-import { Obj, ObjType } from '~/types'
+import { Obj } from '~/types'
 import { fsGet, fsList } from '~/utils/api'
 import { useObjStore } from '~/store/useObjStore'
+
+import { isAudioObject } from '~/utils/audioCover'
 
 export interface AudioTrack {
   obj: Obj
@@ -11,14 +13,7 @@ export interface AudioTrack {
 
 export type RepeatMode = 'list' | 'one' | 'off' | 'shuffle'
 
-const AUDIO_EXTS = ['mp3', 'flac', 'wav', 'aac', 'ogg', 'm4a', 'opus', 'ape', 'wma', 'alac']
-
-export const isAudioFile = (obj: Obj): boolean => {
-  if (obj.is_dir) return false
-  if (obj.type === ObjType.AUDIO) return true
-  const ext = obj.name.toLowerCase().split('.').pop() || ''
-  return AUDIO_EXTS.includes(ext)
-}
+export const isAudioFile = isAudioObject
 
 interface AudioPlayerState {
   activeTrack: AudioTrack | null
@@ -57,6 +52,11 @@ interface AudioPlayerState {
   setExpanded: (expanded: boolean) => void
   closePlayer: () => void
   updateTime: (currentTime: number, duration: number) => void
+  renameTrack: (dirPath: string, oldName: string, newName: string) => void
+  renamePath: (dirPath: string, oldName: string, newName: string, isDir?: boolean) => void
+  batchRenameTracks: (dirPath: string, renameList: { src_name: string; new_name: string }[]) => void
+  moveTracks: (srcDir: string, dstDir: string, names: string[]) => void
+  removeTracksByPath: (dirPath: string, names: string[]) => void
 }
 
 const savedVolume = (() => {
@@ -426,5 +426,214 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => ({
 
   updateTime: (currentTime: number, duration: number) => {
     set({ currentTime, duration: duration || 0 })
+  },
+
+  renameTrack: (dirPath: string, oldName: string, newName: string) => {
+    get().renamePath(dirPath, oldName, newName, false)
+  },
+
+  renamePath: (dirPath: string, oldName: string, newName: string, isDir?: boolean) => {
+    const cleanDirPath = dirPath.replace(/\/+$/, '') || '/'
+    set((state) => {
+      let activeTrack = state.activeTrack
+      const oldDirPath = cleanDirPath === '/' ? `/${oldName}` : `${cleanDirPath}/${oldName}`
+      const newDirPath = cleanDirPath === '/' ? `/${newName}` : `${cleanDirPath}/${newName}`
+
+      if (isDir) {
+        // Folder rename
+        if (activeTrack) {
+          const trackDirPath = activeTrack.path.replace(/\/+$/, '') || '/'
+          if (trackDirPath === oldDirPath) {
+            activeTrack = { ...activeTrack, path: newDirPath }
+          } else if (trackDirPath.startsWith(oldDirPath + '/')) {
+            activeTrack = {
+              ...activeTrack,
+              path: newDirPath + trackDirPath.slice(oldDirPath.length),
+            }
+          }
+        }
+
+        const playlist = state.playlist.map((track) => {
+          const trackDirPath = track.path.replace(/\/+$/, '') || '/'
+          if (trackDirPath === oldDirPath) {
+            return { ...track, path: newDirPath }
+          }
+          if (trackDirPath.startsWith(oldDirPath + '/')) {
+            return {
+              ...track,
+              path: newDirPath + trackDirPath.slice(oldDirPath.length),
+            }
+          }
+          return track
+        })
+
+        return { activeTrack, playlist }
+      } else {
+        // File rename
+        if (
+          activeTrack &&
+          (activeTrack.path.replace(/\/+$/, '') || '/') === cleanDirPath &&
+          activeTrack.obj.name === oldName
+        ) {
+          activeTrack = {
+            ...activeTrack,
+            obj: {
+              ...activeTrack.obj,
+              name: newName,
+            },
+          }
+        }
+
+        const playlist = state.playlist.map((track) => {
+          const trackDirPath = track.path.replace(/\/+$/, '') || '/'
+          if (trackDirPath === cleanDirPath && track.obj.name === oldName) {
+            return {
+              ...track,
+              obj: {
+                ...track.obj,
+                name: newName,
+              },
+            }
+          }
+          return track
+        })
+
+        return { activeTrack, playlist }
+      }
+    })
+  },
+
+  batchRenameTracks: (dirPath: string, renameList: { src_name: string; new_name: string }[]) => {
+    const cleanDirPath = dirPath.replace(/\/+$/, '') || '/'
+    const renameMap = new Map<string, string>()
+    for (const item of renameList) {
+      if (item.src_name !== item.new_name) {
+        renameMap.set(item.src_name, item.new_name)
+      }
+    }
+    if (renameMap.size === 0) return
+
+    set((state) => {
+      let activeTrack = state.activeTrack
+      if (
+        activeTrack &&
+        (activeTrack.path.replace(/\/+$/, '') || '/') === cleanDirPath &&
+        renameMap.has(activeTrack.obj.name)
+      ) {
+        activeTrack = {
+          ...activeTrack,
+          obj: {
+            ...activeTrack.obj,
+            name: renameMap.get(activeTrack.obj.name)!,
+          },
+        }
+      }
+
+      const playlist = state.playlist.map((track) => {
+        const trackDirPath = track.path.replace(/\/+$/, '') || '/'
+        if (trackDirPath === cleanDirPath && renameMap.has(track.obj.name)) {
+          return {
+            ...track,
+            obj: {
+              ...track.obj,
+              name: renameMap.get(track.obj.name)!,
+            },
+          }
+        }
+        return track
+      })
+
+      return { activeTrack, playlist }
+    })
+  },
+
+  moveTracks: (srcDir: string, dstDir: string, names: string[]) => {
+    const cleanSrcDir = srcDir.replace(/\/+$/, '') || '/'
+    const cleanDstDir = dstDir.replace(/\/+$/, '') || '/'
+    if (cleanSrcDir === cleanDstDir || names.length === 0) return
+
+    set((state) => {
+      let activeTrack = state.activeTrack
+
+      const updateTrackPath = (track: AudioTrack): AudioTrack => {
+        const trackDirPath = track.path.replace(/\/+$/, '') || '/'
+        for (const name of names) {
+          // 1. Direct file moved
+          if (trackDirPath === cleanSrcDir && track.obj.name === name) {
+            return { ...track, path: cleanDstDir }
+          }
+          // 2. Folder containing track was moved
+          const oldFolder = cleanSrcDir === '/' ? `/${name}` : `${cleanSrcDir}/${name}`
+          const newFolder = cleanDstDir === '/' ? `/${name}` : `${cleanDstDir}/${name}`
+          if (trackDirPath === oldFolder) {
+            return { ...track, path: newFolder }
+          }
+          if (trackDirPath.startsWith(oldFolder + '/')) {
+            return {
+              ...track,
+              path: newFolder + trackDirPath.slice(oldFolder.length),
+            }
+          }
+        }
+        return track
+      }
+
+      if (activeTrack) {
+        activeTrack = updateTrackPath(activeTrack)
+      }
+
+      const playlist = state.playlist.map(updateTrackPath)
+      return { activeTrack, playlist }
+    })
+  },
+
+  removeTracksByPath: (dirPath: string, names: string[]) => {
+    const cleanDirPath = dirPath.replace(/\/+$/, '') || '/'
+    if (names.length === 0) return
+
+    set((state) => {
+      const nameSet = new Set(names)
+      const folderPrefixes = names.map((n) =>
+        cleanDirPath === '/' ? `/${n}` : `${cleanDirPath}/${n}`
+      )
+
+      const shouldRemove = (track: AudioTrack): boolean => {
+        const trackDirPath = track.path.replace(/\/+$/, '') || '/'
+        if (trackDirPath === cleanDirPath && nameSet.has(track.obj.name)) {
+          return true
+        }
+        return folderPrefixes.some(
+          (prefix) => trackDirPath === prefix || trackDirPath.startsWith(prefix + '/')
+        )
+      }
+
+      let activeTrack = state.activeTrack
+      let currentIndex = state.currentIndex
+      let isPlaying = state.isPlaying
+      const playlist = state.playlist.filter((t) => !shouldRemove(t))
+
+      if (activeTrack && shouldRemove(activeTrack)) {
+        if (playlist.length === 0) {
+          return {
+            activeTrack: null,
+            playlist: [],
+            currentIndex: -1,
+            isPlaying: false,
+            currentTime: 0,
+            duration: 0,
+          }
+        }
+        // Advance to next valid track
+        const newIdx = Math.min(currentIndex, playlist.length - 1)
+        activeTrack = playlist[newIdx]
+        currentIndex = newIdx
+      } else if (activeTrack) {
+        currentIndex = playlist.findIndex(
+          (t) => t.path === activeTrack!.path && t.obj.name === activeTrack!.obj.name
+        )
+      }
+
+      return { activeTrack, playlist, currentIndex, isPlaying }
+    })
   },
 }))

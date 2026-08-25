@@ -7,6 +7,7 @@ import { Obj } from '~/types'
 import { useT } from '~/lang'
 import { getFileIcon } from '~/utils/icon'
 import { getFileSize } from '~/utils/str'
+import { useAudioPlayerStore } from '~/store/useAudioPlayerStore'
 
 interface DeleteModalProps {
   targets: Obj[]
@@ -28,6 +29,7 @@ export const DeleteModal: React.FC<DeleteModalProps> = ({ targets, isOpen, onClo
       const resp = await fsRemove(currentPath, names)
       if (resp.code === 200) {
         notify.success(t('global.delete_success') || 'Deleted successfully')
+        useAudioPlayerStore.getState().removeTracksByPath(currentPath, names)
         clearSelection()
         onClose()
         fetchPath(currentPath, '', true)

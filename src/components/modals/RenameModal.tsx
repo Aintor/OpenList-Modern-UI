@@ -6,6 +6,7 @@ import { notify } from '~/utils/notify'
 import { validateFilename } from '~/utils/str'
 import { Obj } from '~/types'
 import { useT } from '~/lang'
+import { useAudioPlayerStore } from '~/store/useAudioPlayerStore'
 
 interface RenameModalProps {
   target: Obj | null
@@ -46,6 +47,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({ target, isOpen, onClos
       const resp = await fsRename(targetPath, newName)
       if (resp.code === 200) {
         notify.success(t('global.save_success') || 'Renamed successfully')
+        useAudioPlayerStore.getState().renamePath(currentPath, target.name, newName, target.is_dir)
         onClose()
         fetchPath(currentPath, '', true)
       } else {

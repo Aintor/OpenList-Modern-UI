@@ -24,6 +24,7 @@ import {
 import { useAudioPlayerStore, RepeatMode } from '~/store/useAudioPlayerStore'
 import { Tooltip } from '~/components/ui/Tooltip'
 import { useT } from '~/lang'
+import { useAudioCover } from '~/utils/audioCover'
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(Draggable)
@@ -130,6 +131,8 @@ export const GlobalAudioPlayer: React.FC = () => {
     updateTime,
     playTrack,
   } = useAudioPlayerStore()
+
+  const coverUrl = useAudioCover(activeTrack?.obj || null, activeTrack?.path || '/')
 
   // Vertical displacement drag reorder handler with edge rubber-band damping
   const handleGripPointerDown = (e: React.PointerEvent, startIndex: number) => {
@@ -414,6 +417,7 @@ export const GlobalAudioPlayer: React.FC = () => {
       title: activeTrack.obj.name,
       artist: 'OpenList Audio',
       album: activeTrack.path,
+      ...(coverUrl ? { artwork: [{ src: coverUrl }] } : {}),
     })
 
     navigator.mediaSession.setActionHandler('play', () => resume())
@@ -700,13 +704,23 @@ export const GlobalAudioPlayer: React.FC = () => {
 
             {/* Rotating Disc / Album Icon (Perfect Concentric Circle with distinct dynamic border) */}
             <div
-              className={`relative flex h-8.5 w-8.5 items-center justify-center rounded-full bg-slate-950/90 border-2 transition-colors duration-300 shadow-inner ${
+              className={`relative flex h-8.5 w-8.5 items-center justify-center rounded-full bg-slate-950/90 border-2 transition-colors duration-300 shadow-inner overflow-hidden ${
                 isPlaying
                   ? 'border-indigo-500 text-indigo-400'
                   : 'border-white/20 text-slate-400'
               }`}
             >
-              {loading ? (
+              {coverUrl ? (
+                <img
+                  src={coverUrl}
+                  alt={activeTrack.obj.name}
+                  className="h-full w-full object-cover animate-spin rounded-full"
+                  style={{
+                    animationDuration: '6s',
+                    animationPlayState: isPlaying ? 'running' : 'paused',
+                  }}
+                />
+              ) : loading ? (
                 <Loader2 className="h-4.5 w-4.5 animate-spin text-indigo-400" />
               ) : (
                 <Disc3

@@ -7,6 +7,7 @@ import { useDownload } from '~/hooks/useDownload'
 import { useObjStore } from '~/store/useObjStore'
 import { useSettingsStore } from '~/store/useSettingsStore'
 import { useT } from '~/lang'
+import { useAudioCover, isAudioObject } from '~/utils/audioCover'
 
 interface ListItemProps {
   obj: StoreObj
@@ -29,9 +30,14 @@ export const ListItem: React.FC<ListItemProps> = ({
 }) => {
   const isSelected = !!obj.selected
   const hasSelection = useObjStore((state) => state.objs.some((o) => o.selected))
+  const currentPath = useObjStore((state) => state.currentPath)
   const { downloadObj } = useDownload()
   const { getSettingBool } = useSettingsStore()
   const t = useT()
+
+  const isAudio = isAudioObject(obj)
+  const audioCover = useAudioCover(isAudio && !obj.thumb ? obj : null, currentPath)
+  const effectiveThumb = obj.thumb || audioCover
 
   const handleClick = (e: React.MouseEvent) => {
     if (hasJustFinishedDrag && hasJustFinishedDrag()) {
@@ -96,7 +102,17 @@ export const ListItem: React.FC<ListItemProps> = ({
           {isSelected && <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" />}
         </button>
 
-        <div className="shrink-0">{getFileIcon(obj, 'w-4 h-4 sm:w-5 sm:h-5')}</div>
+        <div className="shrink-0 flex items-center justify-center">
+          {effectiveThumb ? (
+            <img
+              src={effectiveThumb}
+              alt={obj.name}
+              className="h-4 w-4 sm:h-5 sm:w-5 rounded object-cover shadow-2xs"
+            />
+          ) : (
+            getFileIcon(obj, 'w-4 h-4 sm:w-5 sm:h-5')
+          )}
+        </div>
 
         <span
           title={obj.name}
