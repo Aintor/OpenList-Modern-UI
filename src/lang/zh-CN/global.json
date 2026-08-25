@@ -37,6 +37,7 @@
   "empty_input": "请输入",
   "unsaved_changes_confirm": "您有未保存的更改。是否确定要离开？",
   "invalid_filename_chars": "文件名不能包含: / \\ ? < > * : | \"",
+  "reserved_root_prefix": "根目录下不能使用以 @ 开头的系统保留名称",
   "invalid_regex": "正则表达式无效",
   "name": "名称",
   "go_to_storages": "转到存储",
@@ -55,6 +56,14 @@
     "doc": "文档"
   },
   "readonly": "只读",
+  "admin": "管理员",
+  "user": "普通用户",
+  "guest": "访客",
+  "language": "语言",
+  "logout": "退出登录",
+  "theme_light": "浅色",
+  "theme_dark": "深色",
+  "theme_auto": "跟随系统",
   "not_found": {
     "title": "目录不存在",
     "subtitle": "请检查访问路径或返回首页",

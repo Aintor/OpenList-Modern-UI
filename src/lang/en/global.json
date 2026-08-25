@@ -37,6 +37,7 @@
   "empty_input": "Please input",
   "unsaved_changes_confirm": "You have unsaved changes. Are you sure you want to leave?",
   "invalid_filename_chars": "Filename cannot contain: / \\ ? < > * : | \"",
+  "reserved_root_prefix": "Names starting with '@' are reserved for system routes in the root directory",
   "invalid_regex": "Invalid regular expression",
   "name": "Name",
   "go_to_storages": "Go to Storages",
@@ -55,6 +56,14 @@
     "doc": "Documents"
   },
   "readonly": "Read Only",
+  "admin": "Administrator",
+  "user": "User",
+  "guest": "Guest",
+  "language": "Language",
+  "logout": "Logout",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_auto": "System",
   "not_found": {
     "title": "Directory Not Found",
     "subtitle": "Please check the path or return to home",

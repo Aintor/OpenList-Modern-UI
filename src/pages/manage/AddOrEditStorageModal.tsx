@@ -190,7 +190,7 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
           ) : item.type === Type.Select && item.options ? (
             <CustomSelect
               value={val}
-              onChange={(selected) => setValues((prev) => ({ ...prev, [item.name]: selected }))}
+              onChange={(v) => setValues((prev) => ({ ...prev, [item.name]: v }))}
               options={item.options.split(',').map((opt) => {
                 const optKey = isCommon
                   ? `storages.common.${item.name}s.${opt}`
@@ -202,14 +202,14 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
                 }
               })}
               className="w-full"
-              triggerClassName="h-10 text-xs w-full bg-slate-50 dark:bg-slate-950/60 dark:border-slate-800 font-semibold"
+              triggerClassName="h-10 text-base sm:text-xs w-full bg-slate-50 dark:bg-slate-950/60 dark:border-slate-800 font-semibold"
             />
           ) : item.type === Type.Text ? (
             <textarea
               rows={3}
               value={val}
               onChange={(e) => setValues((prev) => ({ ...prev, [item.name]: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-mono text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-base sm:text-xs font-mono text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
             />
           ) : (
             <input
@@ -221,7 +221,7 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
                   [item.name]: item.type === Type.Number ? Number(e.target.value) : e.target.value,
                 }))
               }
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
             />
           )}
         </div>
@@ -285,7 +285,7 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
                       label: d,
                     }))}
                     className="w-full"
-                    triggerClassName="h-10 text-xs w-full bg-slate-50 dark:bg-slate-950/60 dark:border-slate-800 font-semibold"
+                    triggerClassName="h-10 text-base sm:text-xs w-full bg-slate-50 dark:bg-slate-950/60 dark:border-slate-800 font-semibold"
                   />
                 </div>
 
@@ -299,7 +299,7 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
                     value={mountPath}
                     onChange={(e) => setMountPath(e.target.value)}
                     placeholder="/my-folder"
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                   />
                 </div>
               </div>
@@ -314,7 +314,7 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
                   value={remark}
                   onChange={(e) => setRemark(e.target.value)}
                   placeholder="Optional description"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
 

@@ -156,7 +156,7 @@ export const AddOrEditMetaModal: React.FC<AddOrEditMetaModalProps> = ({
                   value={path}
                   onChange={(e) => setPath(e.target.value)}
                   placeholder="/protected-folder"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
 
@@ -181,7 +181,7 @@ export const AddOrEditMetaModal: React.FC<AddOrEditMetaModalProps> = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('login.password-tips') || 'Leave empty for public access'}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
 
@@ -206,7 +206,7 @@ export const AddOrEditMetaModal: React.FC<AddOrEditMetaModalProps> = ({
                   value={hide}
                   onChange={(e) => setHide(e.target.value)}
                   placeholder={t('metas.hide_help') || 'e.g. ^\\..*|secret.*'}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs font-mono text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs font-mono text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
 
@@ -231,7 +231,7 @@ export const AddOrEditMetaModal: React.FC<AddOrEditMetaModalProps> = ({
                   value={readme}
                   onChange={(e) => setReadme(e.target.value)}
                   placeholder={t('metas.readme_help') || 'Markdown announcement text for this directory'}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-mono text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-base sm:text-xs font-mono text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
 

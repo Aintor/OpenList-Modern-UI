@@ -2,7 +2,7 @@ import React from 'react'
 import { StoreObj } from '~/types'
 import { ListItem } from './ListItem'
 import { useObjStore } from '~/store/useObjStore'
-import { useDragSelect } from '~/hooks/useDragSelect'
+import { useDragSelect, useMobileDragSelect } from '~/hooks/useDragSelect'
 import { useT } from '~/lang'
 
 interface ListProps {
@@ -14,6 +14,7 @@ interface ListProps {
 export const List: React.FC<ListProps> = ({ objs, onOpen, onContextMenu }) => {
   const { selectIndex, selectRange, lastCheckedIndex, orderBy, orderReverse, setOrderBy } = useObjStore()
   const { containerRef } = useDragSelect()
+  const { onTouchStartItem, hasJustFinishedDrag } = useMobileDragSelect()
   const t = useT()
 
   const handleSelect = (index: number, selected: boolean, e?: React.MouseEvent) => {
@@ -69,6 +70,8 @@ export const List: React.FC<ListProps> = ({ objs, onOpen, onContextMenu }) => {
             onOpen={onOpen}
             onSelect={handleSelect}
             onContextMenu={onContextMenu}
+            onTouchStartItem={onTouchStartItem}
+            hasJustFinishedDrag={hasJustFinishedDrag}
           />
         ))}
       </div>

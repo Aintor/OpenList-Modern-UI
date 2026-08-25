@@ -11,8 +11,14 @@ const instance = axios.create({
 
 instance.interceptors.request.use(
   (config) => {
+    const isSharePage =
+      typeof window !== 'undefined' &&
+      (window.location.pathname.startsWith('/@s') || window.location.pathname.startsWith('/@share'))
+
+    // On public share pages, do not attach user authorization token to fs requests so backend treats it as pure public share
+    const isFsOperation = config.url?.startsWith('/fs/')
     const token = localStorage.getItem('token')
-    if (token) {
+    if (token && !(isSharePage && isFsOperation)) {
       config.headers['Authorization'] = token
     }
     return config

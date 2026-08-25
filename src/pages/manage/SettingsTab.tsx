@@ -44,14 +44,14 @@ export const SettingsTab: React.FC = () => {
   const activeSchema = schemaMap[selectedGroup] || (siteSchema as unknown as SettingPageSchema)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Sub-Group Navigation Pills (Sticky pinned on scroll with frosted glass backdrop) */}
-      <div className="sticky -top-6 lg:-top-8 z-20 -mx-6 lg:-mx-8 px-6 lg:px-8 py-3.5 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center gap-1.5 transition-colors shadow-xs">
+      <div className="sticky -top-4 sm:-top-6 lg:-top-8 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none transition-colors shadow-xs">
         {groupTabs.map((g) => (
           <button
             key={g.id}
             onClick={() => setSelectedGroup(g.id)}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold shrink-0 transition-all cursor-pointer ${
               selectedGroup === g.id
                 ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-500/20'
                 : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-100'
@@ -63,7 +63,7 @@ export const SettingsTab: React.FC = () => {
       </div>
 
       {/* Schema-Driven Dynamic Form Container */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <SettingFormRenderer
           key={activeSchema.id}
           schema={activeSchema}

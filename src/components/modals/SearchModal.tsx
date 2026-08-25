@@ -235,7 +235,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 ? (t('home.search.search_current_dir') || '搜索当前目录...')
                 : (t('home.search.search_global') || '全站搜索文件或文件夹...')
             }
-            className="flex-1 bg-transparent text-sm sm:text-base font-normal text-slate-900 placeholder-slate-400 focus:outline-none dark:text-slate-100"
+            className="flex-1 bg-transparent text-base font-normal text-slate-900 placeholder-slate-400 focus:outline-none dark:text-slate-100"
           />
 
           {/* Right Controls in Input Bar */}

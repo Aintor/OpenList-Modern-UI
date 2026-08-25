@@ -3,6 +3,7 @@ import { X, Edit3, Loader2, Play } from 'lucide-react'
 import { fsBatchRename } from '~/utils/api'
 import { useObjStore } from '~/store/useObjStore'
 import { notify } from '~/utils/notify'
+import { validateFilename } from '~/utils/str'
 import { Obj } from '~/types'
 import { useT } from '~/lang'
 
@@ -46,9 +47,19 @@ export const BatchRenameModal: React.FC<BatchRenameModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!searchPattern) {
+    if (!searchPattern && !replacement) {
       notify.error(t('global.empty_input') || 'Please specify search pattern')
       return
+    }
+
+    const isRoot = currentPath === '/' || currentPath === ''
+    for (const p of previews) {
+      const { valid, error } = validateFilename(p.newName, isRoot)
+      if (!valid) {
+        const errorMsg = error ? t(`global.${error}`) || error : t('global.invalid_filename_chars')
+        notify.error(`${p.newName}: ${errorMsg}`)
+        return
+      }
     }
 
     setSubmitting(true)
@@ -120,7 +131,7 @@ export const BatchRenameModal: React.FC<BatchRenameModalProps> = ({
                 value={searchPattern}
                 onChange={(e) => setSearchPattern(e.target.value)}
                 placeholder="String or regex"
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
               />
             </div>
 
@@ -133,7 +144,7 @@ export const BatchRenameModal: React.FC<BatchRenameModalProps> = ({
                 value={replacement}
                 onChange={(e) => setReplacement(e.target.value)}
                 placeholder="Replacement string"
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
               />
             </div>
           </div>

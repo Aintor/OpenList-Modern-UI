@@ -968,7 +968,22 @@ async function processUploadQueue() {
 }
 
 async function executeUploadTask(task: TransferTask) {
-  if (!task.file) return
+  if (!task.file) {
+    useTransferStore.setState((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === task.id
+          ? {
+              ...t,
+              status: 'error',
+              phase: 'error',
+              speed: 0,
+              error: '文件句柄已失效，请重新选择文件上传',
+            }
+          : t
+      ),
+    }))
+    return
+  }
 
   const abortController = new AbortController()
 

@@ -19,6 +19,7 @@ import {
   Loader2,
   Trash2,
   GripVertical,
+  ChevronDown,
 } from 'lucide-react'
 import { useAudioPlayerStore, RepeatMode } from '~/store/useAudioPlayerStore'
 import { Tooltip } from '~/components/ui/Tooltip'
@@ -505,10 +506,10 @@ export const GlobalAudioPlayer: React.FC = () => {
         autoPlay
       />
 
-      {/* Main Draggable Anchor Container */}
+      {/* Main Draggable Anchor Container (Desktop >= 768px) */}
       <div
         ref={containerRef}
-        className="fixed bottom-6 left-6 z-40 select-none touch-none pointer-events-auto"
+        className="hidden md:block fixed bottom-6 left-6 z-40 select-none touch-none pointer-events-auto"
       >
         {/* Playlist Flyout Drawer */}
         <div
@@ -975,6 +976,293 @@ export const GlobalAudioPlayer: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 2. Mobile Presentation (< md / < 768px): Docked Capsule & Detached Floating Card */}
+      <div className="block md:hidden">
+        {/* Mobile Collapsed Floating Capsule Bar */}
+        {!isExpanded && (
+          <div className="fixed bottom-4 inset-x-3.5 z-40 select-none animate-in slide-in-from-bottom duration-200">
+            <div
+              onClick={() => setExpanded(true)}
+              className="relative flex items-center justify-between rounded-2xl border border-white/15 bg-slate-900/90 text-white shadow-2xl backdrop-blur-2xl px-3 py-2.5 cursor-pointer active:scale-[0.98] transition-transform overflow-hidden"
+            >
+              {/* Progress hairline indicator on bottom edge */}
+              <div className="absolute bottom-0 inset-x-0 h-0.5 bg-white/10">
+                <div
+                  className="h-full bg-indigo-500 transition-all duration-200"
+                  style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                />
+              </div>
+
+              {/* Left: Mini Vinyl Disc + Track Name */}
+              <div className="flex items-center space-x-2.5 min-w-0 flex-1 pr-2">
+                <div
+                  className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-950 border ${
+                    isPlaying ? 'border-indigo-500 text-indigo-400' : 'border-white/20 text-slate-400'
+                  }`}
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-indigo-400" />
+                  ) : (
+                    <Disc3
+                      className="h-5 w-5 animate-spin"
+                      style={{
+                        animationDuration: '4s',
+                        animationPlayState: isPlaying ? 'running' : 'paused',
+                        opacity: isPlaying ? 1 : 0.7,
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h4 title={activeTrack.obj.name} className="truncate text-xs font-bold text-white leading-tight">
+                    {activeTrack.obj.name}
+                  </h4>
+                  <p className="truncate text-[10px] text-slate-400 font-mono mt-0.5">
+                    {formatAudioTime(currentTime)} / {formatAudioTime(duration)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: Controls */}
+              <div className="flex items-center space-x-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  className="flex h-8.5 w-8.5 items-center justify-center rounded-full bg-indigo-600 active:scale-90 text-white shadow-xs"
+                >
+                  {isPlaying ? (
+                    <Pause className="h-4 w-4 fill-current" />
+                  ) : (
+                    <Play className="h-4 w-4 fill-current ml-0.5" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={nextTrack}
+                  disabled={playlist.length <= 1}
+                  className="rounded-xl p-1.5 text-slate-300 active:scale-90 disabled:opacity-30"
+                >
+                  <SkipForward className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Expanded Detached Floating Inset Card */}
+        {isExpanded && (
+          <div className="fixed inset-0 z-50">
+            {/* Backdrop */}
+            <div
+              onClick={() => setExpanded(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+            />
+
+            {/* Inset Floating Player Card (Margins on all 4 sides) */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-4 max-h-[88vh] my-auto flex flex-col justify-between rounded-3xl border border-white/15 bg-slate-900/95 text-white shadow-2xl backdrop-blur-3xl p-5 select-none animate-in zoom-in-95 fade-in duration-200 overflow-hidden"
+            >
+              {/* Header: Minimize / Playlist / Close */}
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setExpanded(false)}
+                  className="flex items-center space-x-1 rounded-xl bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-200 active:scale-95 cursor-pointer"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  <span>{t('home.player.minimize') || '收起'}</span>
+                </button>
+
+                <div className="flex items-center space-x-1">
+                  <button
+                    type="button"
+                    onClick={() => togglePlaylist()}
+                    className={`flex items-center space-x-1 rounded-xl p-2 transition-colors cursor-pointer ${
+                      isPlaylistOpen ? 'bg-indigo-600 text-white' : 'text-slate-400 bg-white/10'
+                    }`}
+                  >
+                    <ListMusic className="h-4 w-4" />
+                    {playlist.length > 0 && (
+                      <span className="font-mono text-[10px] font-bold">
+                        {currentIndex + 1}/{playlist.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={closePlayer}
+                    className="rounded-xl bg-white/10 p-2 text-slate-400 hover:text-rose-400 cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Center Content: Playlist View OR Large Vinyl Record */}
+              {isPlaylistOpen ? (
+                <div className="flex-1 overflow-y-auto my-3 rounded-2xl bg-black/40 border border-white/10 p-2 space-y-1 max-h-[46vh]">
+                  <div className="flex items-center justify-between px-2 py-1 border-b border-white/10 text-xs font-bold text-indigo-300">
+                    <span>{t('home.player.playlist') || '播放列表'} ({playlist.length})</span>
+                    <button
+                      type="button"
+                      onClick={clearPlaylist}
+                      className="text-rose-400 text-[11px] font-medium cursor-pointer"
+                    >
+                      {t('home.player.clear_playlist') || '清空'}
+                    </button>
+                  </div>
+                  {playlist.map((track, idx) => {
+                    const isCurrent = idx === currentIndex
+                    return (
+                      <div
+                        key={`${track.path}/${track.obj.name}`}
+                        onClick={() => playTrack(track.obj, track.path, playlist.map((p) => p.obj))}
+                        className={`flex items-center justify-between rounded-xl px-2.5 py-2 text-xs cursor-pointer ${
+                          isCurrent
+                            ? 'bg-indigo-600 text-white font-bold'
+                            : 'text-slate-300 active:bg-white/10'
+                        }`}
+                      >
+                        <span className="truncate flex-1 pr-2">{track.obj.name}</span>
+                        {isCurrent && <span className="h-2 w-2 rounded-full bg-white shrink-0" />}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center my-auto py-2">
+                  {/* Big Vinyl Record with Grooves and Rotation */}
+                  <div className="relative flex h-40 w-40 sm:h-48 sm:w-48 items-center justify-center rounded-full bg-slate-950 border-4 border-slate-700 shadow-2xl shadow-black/80">
+                    <div className="absolute inset-2 rounded-full border border-white/5" />
+                    <div className="absolute inset-4 rounded-full border border-white/10" />
+                    <div className="absolute inset-7 rounded-full border border-white/5" />
+                    <div className="absolute inset-10 rounded-full border border-white/10" />
+
+                    <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600/90 text-white border-2 border-indigo-400 shadow-inner">
+                      <Disc3
+                        className="h-8 w-8 animate-spin"
+                        style={{
+                          animationDuration: '5s',
+                          animationPlayState: isPlaying ? 'running' : 'paused',
+                        }}
+                      />
+                      <div className="absolute h-2.5 w-2.5 rounded-full bg-slate-950 border border-white/30" />
+                    </div>
+                  </div>
+
+                  {/* Song Title and Path */}
+                  <div className="mt-4 text-center px-4 w-full">
+                    <h3 title={activeTrack.obj.name} className="truncate text-sm font-bold text-white leading-tight">
+                      {activeTrack.obj.name}
+                    </h3>
+                    <p title={activeTrack.path} className="truncate text-xs text-slate-400 font-mono mt-1">
+                      {activeTrack.path}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom Player Controls */}
+              <div className="space-y-3 pt-2">
+                {/* Scrubbing Progress Slider */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 tabular-nums">
+                    <span>{formatAudioTime(isScrubbing ? scrubValue : currentTime)}</span>
+                    <span>{formatAudioTime(duration)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max={duration || 100}
+                    step="0.1"
+                    value={isScrubbing ? scrubValue : currentTime}
+                    onChange={handleScrubChange}
+                    onMouseUp={handleScrubCommit}
+                    onTouchEnd={handleScrubCommit}
+                    style={{
+                      background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${duration > 0 ? ((isScrubbing ? scrubValue : currentTime) / duration) * 100 : 0}%, rgba(255, 255, 255, 0.18) ${duration > 0 ? ((isScrubbing ? scrubValue : currentTime) / duration) * 100 : 0}%, rgba(255, 255, 255, 0.18) 100%)`,
+                    }}
+                    className="audio-mini-slider w-full"
+                  />
+                </div>
+
+                {/* Symmetrical Action Buttons */}
+                <div className="flex items-center justify-between px-2 pt-1">
+                  {/* Repeat mode */}
+                  <button
+                    type="button"
+                    onClick={handleCycleRepeatMode}
+                    className={`rounded-xl p-2.5 transition-colors cursor-pointer ${
+                      repeatMode !== 'off' ? 'text-indigo-400 bg-indigo-950/60' : 'text-slate-400'
+                    }`}
+                  >
+                    {repeatMode === 'off' ? (
+                      <RepeatOff className="h-5 w-5" />
+                    ) : repeatMode === 'list' ? (
+                      <Repeat className="h-5 w-5" />
+                    ) : repeatMode === 'one' ? (
+                      <Repeat1 className="h-5 w-5" />
+                    ) : (
+                      <Shuffle className="h-5 w-5" />
+                    )}
+                  </button>
+
+                  {/* Previous */}
+                  <button
+                    type="button"
+                    onClick={prevTrack}
+                    disabled={playlist.length <= 1}
+                    className="rounded-full p-2.5 text-slate-200 active:scale-90 disabled:opacity-30 cursor-pointer"
+                  >
+                    <SkipBack className="h-6 w-6" />
+                  </button>
+
+                  {/* Large Center Play / Pause Button */}
+                  <button
+                    type="button"
+                    onClick={togglePlay}
+                    className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 active:scale-95 text-white shadow-xl shadow-indigo-600/40 cursor-pointer"
+                  >
+                    {isPlaying ? (
+                      <Pause className="h-7 w-7 fill-current" />
+                    ) : (
+                      <Play className="h-7 w-7 fill-current ml-1" />
+                    )}
+                  </button>
+
+                  {/* Next */}
+                  <button
+                    type="button"
+                    onClick={nextTrack}
+                    disabled={playlist.length <= 1}
+                    className="rounded-full p-2.5 text-slate-200 active:scale-90 disabled:opacity-30 cursor-pointer"
+                  >
+                    <SkipForward className="h-6 w-6" />
+                  </button>
+
+                  {/* Mute toggle */}
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="rounded-xl p-2.5 text-slate-400 active:scale-90 cursor-pointer"
+                  >
+                    {isMuted || volume === 0 ? (
+                      <VolumeX className="h-5 w-5 text-rose-400" />
+                    ) : (
+                      <Volume2 className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )

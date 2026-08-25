@@ -32,9 +32,11 @@ export const RenameModal: React.FC<RenameModalProps> = ({ target, isOpen, onClos
       return
     }
 
-    const { valid, error } = validateFilename(newName)
+    const isRoot = currentPath === '/' || currentPath === ''
+    const { valid, error } = validateFilename(newName, isRoot)
     if (!valid) {
-      notify.error(error || t('global.invalid_filename_chars') || 'Invalid name')
+      const errorMsg = error ? t(`global.${error}`) || error : t('global.invalid_filename_chars')
+      notify.error(errorMsg || 'Invalid name')
       return
     }
 
@@ -98,7 +100,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({ target, isOpen, onClos
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={t('home.toolbar.input_new_name') || 'New Name'}
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:focus:bg-slate-900"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-base sm:text-sm transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:focus:bg-slate-900"
             />
           </div>
 

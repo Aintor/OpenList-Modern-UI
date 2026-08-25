@@ -15,7 +15,6 @@ import { BatchRenameModal } from '~/components/modals/BatchRenameModal'
 import { ShareModal } from '~/components/modals/ShareModal'
 import { OfflineDownloadModal } from '~/components/modals/OfflineDownloadModal'
 import { SearchModal } from '~/components/modals/SearchModal'
-import { TransferManager } from '~/components/modals/TransferManager'
 import { PasswordPrompt } from '~/components/folder/PasswordPrompt'
 import { NotFoundPage } from '~/components/ui/NotFoundPage'
 import { Manage } from '~/pages/manage/Manage'
@@ -40,6 +39,7 @@ export function App() {
     loading,
     needPassword,
     notFound,
+    write,
     fetchPath,
     getSelectedObjs,
     selectIndex,
@@ -52,8 +52,21 @@ export function App() {
   const blankFileInputRef = useRef<HTMLInputElement>(null)
   const blankFolderInputRef = useRef<HTMLInputElement>(null)
 
+  const isShareRoute =
+    currentPath.startsWith('/@s') ||
+    currentPath.startsWith('/@share') ||
+    window.location.pathname.startsWith('/@s') ||
+    window.location.pathname.startsWith('/@share')
+
+  const canUpload =
+    !isShareRoute &&
+    write &&
+    !needPassword &&
+    !notFound &&
+    (UserMethods.can(user, 3) || UserMethods.is_admin(user))
+
   const handleBlankFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return
+    if (!canUpload || !e.target.files?.length) return
     const files = Array.from(e.target.files)
     useTransferStore.getState().addUploadFiles(files, currentPath, password)
     e.target.value = ''
@@ -88,6 +101,7 @@ export function App() {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (!canUpload || isManageOpen) return
     if (e.dataTransfer.types.includes('Files')) {
       setIsDraggingOver(true)
     }
@@ -96,6 +110,7 @@ export function App() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (!canUpload || isManageOpen) return
     if (e.currentTarget.contains(e.relatedTarget as Node)) return
     setIsDraggingOver(false)
   }
@@ -104,6 +119,7 @@ export function App() {
     e.preventDefault()
     e.stopPropagation()
     setIsDraggingOver(false)
+    if (!canUpload || isManageOpen) return
     if (e.dataTransfer) {
       const files = await extractDroppedFiles(e.dataTransfer)
       if (files.length > 0) {
@@ -111,8 +127,6 @@ export function App() {
       }
     }
   }
-
-  const isShareRoute = window.location.pathname.startsWith('/@s') || window.location.pathname.startsWith('/@share')
 
   const handleGoToLogin = () => {
     window.history.pushState(null, '', `/@login?redirect=${encodeURIComponent(currentPath)}`)
@@ -131,7 +145,13 @@ export function App() {
       const rawPath = window.location.pathname && window.location.pathname !== '/'
         ? window.location.pathname
         : '/'
-      if (!rawPath.startsWith('/@login')) {
+      if (rawPath.startsWith('/@login')) {
+        if (!UserMethods.is_guest(user)) {
+          const redirect = new URLSearchParams(window.location.search).get('redirect') || '/'
+          window.history.replaceState(null, '', redirect)
+          fetchPath(redirect)
+        }
+      } else {
         fetchPath(rawPath)
       }
     }
@@ -141,14 +161,22 @@ export function App() {
   useEffect(() => {
     const handlePopState = () => {
       const raw = window.location.pathname || '/'
-      if (!raw.startsWith('/@login')) {
+      if (raw.startsWith('/@login')) {
+        if (!UserMethods.is_guest(user)) {
+          const redirect = new URLSearchParams(window.location.search).get('redirect') || '/'
+          window.history.replaceState(null, '', redirect)
+          fetchPath(redirect)
+        } else {
+          setIsLoginOpen(true)
+        }
+      } else {
         setIsLoginOpen(false)
+        fetchPath(raw)
       }
-      fetchPath(raw)
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
+  }, [user])
 
   // Auto-exit manage mode if user is guest
   useEffect(() => {
@@ -166,12 +194,14 @@ export function App() {
     )
   }
 
+  const isGuest = !user || UserMethods.is_guest(user)
   const isExplicitLoginRoute =
     window.location.pathname === '/@login' || window.location.pathname.startsWith('/@login')
+
   const isLoginActive =
     (!user && !isShareRoute) ||
-    (isLoginOpen && UserMethods.is_guest(user)) ||
-    (isExplicitLoginRoute && !isShareRoute)
+    (isLoginOpen && isGuest) ||
+    (isExplicitLoginRoute && !isShareRoute && isGuest)
 
   // 2. Full-page Login view (when unauthenticated, navigating to /@login, or clicking login in guest mode)
   if (isLoginActive && !isShareRoute) {
@@ -257,18 +287,18 @@ export function App() {
     >
       <Toaster position="top-center" richColors theme="system" />
 
-      {/* Drag & Drop Visual Backdrop */}
+      {/* Full-Viewport Immersive Drag & Drop Dropzone */}
       {isDraggingOver && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 dark:bg-black/40 p-6 backdrop-blur-xl pointer-events-none animate-in fade-in duration-150">
-          <div className="flex flex-col items-center space-y-3 rounded-3xl border-2 border-dashed border-indigo-500/80 bg-white/85 dark:bg-slate-900/85 p-8 sm:p-10 shadow-2xl shadow-indigo-500/10 backdrop-blur-2xl transition-all">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-              <UploadCloud className="h-8 w-8" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 p-4 sm:p-6 backdrop-blur-md pointer-events-none animate-in fade-in duration-150">
+          <div className="flex h-full w-full flex-col items-center justify-center space-y-4 rounded-3xl border-3 border-dashed border-indigo-500 bg-white/90 dark:bg-slate-900/90 shadow-2xl backdrop-blur-2xl transition-all text-center p-6 sm:p-10">
+            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 shadow-lg shadow-indigo-500/10">
+              <UploadCloud className="h-10 w-10 stroke-[2]" />
             </div>
-            <div className="text-center space-y-1.5">
-              <h3 className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100">
+            <div className="space-y-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                 {t('home.upload.drop_hint') || '释放文件以上传至当前目录'}
-              </h3>
-              <p className="inline-block text-xs text-indigo-600 dark:text-indigo-400 font-mono bg-indigo-50/80 dark:bg-indigo-950/60 px-3 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/40">
+              </h2>
+              <p className="inline-flex items-center text-xs sm:text-sm font-mono font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/80 px-4 py-1.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-xs">
                 {currentPath}
               </p>
             </div>
@@ -471,9 +501,6 @@ export function App() {
 
       {/* Floating Global Audio Music Player (Apple Music / Vinyl Style) */}
       <GlobalAudioPlayer />
-
-      {/* Floating Transfer Progress Manager (Uploads & Downloads) */}
-      <TransferManager />
     </div>
   )
 }

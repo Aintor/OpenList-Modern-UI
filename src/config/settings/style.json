@@ -55,18 +55,22 @@
           "defaultValue": true
         },
         {
+          "key": "show_disk_usage_in_plain_text",
+          "type": "switch",
+          "labelKey": "settings.show_disk_usage_in_plain_text",
+          "helpKey": "settings.show_disk_usage_in_plain_text-tips",
+          "defaultValue": false,
+          "dependsOn": {
+            "field": "hide_storage_details",
+            "value": "false"
+          }
+        },
+        {
           "key": "hide_storage_details_in_manage_page",
           "type": "switch",
           "labelKey": "settings.hide_storage_details_in_manage_page",
           "helpKey": "settings.hide_storage_details_in_manage_page-tips",
           "defaultValue": true
-        },
-        {
-          "key": "show_disk_usage_in_plain_text",
-          "type": "switch",
-          "labelKey": "settings.show_disk_usage_in_plain_text",
-          "helpKey": "settings.show_disk_usage_in_plain_text-tips",
-          "defaultValue": false
         }
       ]
     }

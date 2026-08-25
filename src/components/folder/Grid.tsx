@@ -2,7 +2,7 @@ import React from 'react'
 import { StoreObj } from '~/types'
 import { GridItem } from './GridItem'
 import { useObjStore } from '~/store/useObjStore'
-import { useDragSelect } from '~/hooks/useDragSelect'
+import { useDragSelect, useMobileDragSelect } from '~/hooks/useDragSelect'
 
 interface GridProps {
   objs: StoreObj[]
@@ -13,6 +13,7 @@ interface GridProps {
 export const Grid: React.FC<GridProps> = ({ objs, onOpen, onContextMenu }) => {
   const { selectIndex, selectRange, lastCheckedIndex } = useObjStore()
   const { containerRef } = useDragSelect()
+  const { onTouchStartItem, hasJustFinishedDrag } = useMobileDragSelect()
 
   const handleSelect = (index: number, selected: boolean, e?: React.MouseEvent) => {
     if (e?.shiftKey && lastCheckedIndex >= 0) {
@@ -25,7 +26,7 @@ export const Grid: React.FC<GridProps> = ({ objs, onOpen, onContextMenu }) => {
   return (
     <div
       ref={containerRef}
-      className="viselect-container flex-1 pb-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 content-start"
+      className="viselect-container flex-1 pb-6 grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 content-start"
     >
       {objs.map((obj, i) => (
         <GridItem
@@ -35,6 +36,8 @@ export const Grid: React.FC<GridProps> = ({ objs, onOpen, onContextMenu }) => {
           onOpen={onOpen}
           onSelect={handleSelect}
           onContextMenu={onContextMenu}
+          onTouchStartItem={onTouchStartItem}
+          hasJustFinishedDrag={hasJustFinishedDrag}
         />
       ))}
     </div>

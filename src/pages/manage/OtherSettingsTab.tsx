@@ -145,7 +145,7 @@ export const OtherSettingsTab: React.FC = () => {
       ) : (
         <div className="space-y-5">
           {/* Aria2 Card */}
-          <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
               <DownloadCloud className="h-4 w-4 text-indigo-500" />
               <span>{t('settings_other.aria2') || 'Aria2 RPC'}</span>
@@ -160,7 +160,7 @@ export const OtherSettingsTab: React.FC = () => {
                   value={aria2Uri}
                   onChange={(e) => setAria2Uri(e.target.value)}
                   placeholder="http://127.0.0.1:6800/jsonrpc"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
               <div className="space-y-1.5">
@@ -172,7 +172,7 @@ export const OtherSettingsTab: React.FC = () => {
                   value={aria2Secret}
                   onChange={(e) => setAria2Secret(e.target.value)}
                   placeholder="token:..."
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
             </div>
@@ -190,7 +190,7 @@ export const OtherSettingsTab: React.FC = () => {
           </div>
 
           {/* qBittorrent Card */}
-          <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
               <DownloadCloud className="h-4 w-4 text-sky-500" />
               <span>{t('settings_other.qbittorrent') || 'qBittorrent WebUI'}</span>
@@ -205,7 +205,7 @@ export const OtherSettingsTab: React.FC = () => {
                   value={qbitUrl}
                   onChange={(e) => setQbitUrl(e.target.value)}
                   placeholder="http://admin:adminadmin@127.0.0.1:8080"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
               <div className="space-y-1.5">
@@ -217,7 +217,7 @@ export const OtherSettingsTab: React.FC = () => {
                   value={qbitSeedTime}
                   onChange={(e) => setQbitSeedTime(e.target.value)}
                   placeholder="0"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
             </div>
@@ -235,7 +235,7 @@ export const OtherSettingsTab: React.FC = () => {
           </div>
 
           {/* Transmission Card */}
-          <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
               <DownloadCloud className="h-4 w-4 text-rose-500" />
               <span>{t('settings_other.transmission') || 'Transmission RPC'}</span>
@@ -250,7 +250,7 @@ export const OtherSettingsTab: React.FC = () => {
                   value={transmissionUrl}
                   onChange={(e) => setTransmissionUrl(e.target.value)}
                   placeholder="http://admin:admin@127.0.0.1:9091/transmission/rpc"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
               <div className="space-y-1.5">
@@ -262,7 +262,7 @@ export const OtherSettingsTab: React.FC = () => {
                   value={transmissionSeedTime}
                   onChange={(e) => setTransmissionSeedTime(e.target.value)}
                   placeholder="0"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                 />
               </div>
             </div>
@@ -280,7 +280,7 @@ export const OtherSettingsTab: React.FC = () => {
           </div>
 
           {/* Cloud Drives Temp Dirs Card */}
-          <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
               <HardDrive className="h-4 w-4 text-emerald-500" />
               <span>{t('settings_other.offline_download_temp_dir') || 'Cloud Drive Transfer Directories'}</span>
@@ -296,7 +296,7 @@ export const OtherSettingsTab: React.FC = () => {
                     value={tempDirs[k]}
                     onChange={(e) => setTempDirs({ ...tempDirs, [k]: e.target.value })}
                     placeholder="/"
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
                   />
                 </div>
               ))}

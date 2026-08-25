@@ -22,9 +22,11 @@ export const MkdirModal: React.FC<MkdirModalProps> = ({ isOpen, onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { valid, error } = validateFilename(folderName)
+    const isRoot = currentPath === '/' || currentPath === ''
+    const { valid, error } = validateFilename(folderName, isRoot)
     if (!valid) {
-      notify.error(error || t('global.invalid_filename_chars') || 'Invalid folder name')
+      const errorMsg = error ? t(`global.${error}`) || error : t('global.invalid_filename_chars')
+      notify.error(errorMsg || 'Invalid folder name')
       return
     }
 
@@ -86,7 +88,7 @@ export const MkdirModal: React.FC<MkdirModalProps> = ({ isOpen, onClose }) => {
               value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
               placeholder={t('home.toolbar.input_dir_name') || 'Folder Name'}
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:focus:bg-slate-900"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-base sm:text-sm transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:focus:bg-slate-900"
             />
           </div>
 

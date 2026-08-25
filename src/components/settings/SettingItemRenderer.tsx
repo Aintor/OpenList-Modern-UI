@@ -87,7 +87,7 @@ export const SettingItemRenderer: React.FC<SettingItemRendererProps> = ({
               label: opt.labelKey ? t(opt.labelKey) || opt.label || opt.value : opt.label || opt.value,
             }))}
             className="w-full"
-            triggerClassName="h-10 text-xs w-full bg-slate-50 dark:bg-slate-950/60 dark:border-slate-800 font-semibold"
+            triggerClassName="h-10 text-base sm:text-xs w-full bg-slate-50 dark:bg-slate-950/60 dark:border-slate-800 font-semibold"
           />
         ) : field.type === 'password' ? (
           <div className="relative flex items-center">
@@ -97,7 +97,7 @@ export const SettingItemRenderer: React.FC<SettingItemRendererProps> = ({
               disabled={isReadOnly}
               onChange={(e) => onChange(e.target.value)}
               placeholder={field.placeholderKey ? t(field.placeholderKey) || '' : ''}
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-3.5 pr-10 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-3.5 pr-10 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
             />
             <button
               type="button"
@@ -113,7 +113,7 @@ export const SettingItemRenderer: React.FC<SettingItemRendererProps> = ({
             value={value ?? ''}
             disabled={isReadOnly}
             onChange={(e) => onChange(e.target.value)}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
           />
         ) : field.type === 'code' || field.type === 'textarea' ? (
           <textarea
@@ -122,7 +122,7 @@ export const SettingItemRenderer: React.FC<SettingItemRendererProps> = ({
             disabled={isReadOnly}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholderKey ? t(field.placeholderKey) || '' : ''}
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-xs font-mono text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-base sm:text-xs font-mono text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
           />
         ) : (
           <input
@@ -131,7 +131,7 @@ export const SettingItemRenderer: React.FC<SettingItemRendererProps> = ({
             disabled={isReadOnly}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholderKey ? t(field.placeholderKey) || '' : ''}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
           />
         )}
       </div>

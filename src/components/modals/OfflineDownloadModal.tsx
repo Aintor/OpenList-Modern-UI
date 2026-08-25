@@ -101,7 +101,7 @@ export const OfflineDownloadModal: React.FC<OfflineDownloadModalProps> = ({
               value={urls}
               onChange={(e) => setUrls(e.target.value)}
               placeholder="https://example.com/file.iso&#10;magnet:?xt=urn:btih:..."
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3.5 font-mono text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3.5 font-mono text-base sm:text-xs text-slate-900 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
             />
           </div>
 

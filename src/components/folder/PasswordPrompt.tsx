@@ -53,7 +53,7 @@ export const PasswordPrompt: React.FC<PasswordPromptProps> = ({ onGoToLogin }) =
               value={pwdInput}
               onChange={(e) => setPwdInput(e.target.value)}
               placeholder={title}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-base sm:text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:bg-slate-950"
             />
           </div>
 

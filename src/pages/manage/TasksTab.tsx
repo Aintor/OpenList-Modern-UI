@@ -87,13 +87,13 @@ export const TasksTab: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Category Pills & Done/Undone Tab */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3 dark:border-slate-800">
-        <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3 dark:border-slate-800">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
           {categories.map((c) => (
             <button
               key={c.id}
               onClick={() => setCategory(c.id)}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold shrink-0 transition-all cursor-pointer ${
                 category === c.id
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'

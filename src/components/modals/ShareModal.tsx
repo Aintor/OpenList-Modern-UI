@@ -159,7 +159,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                     type="text"
                     readOnly
                     value={createdShareLink}
-                    className="h-9 w-full rounded-xl border border-indigo-200 bg-white px-3 font-mono text-xs text-slate-700 dark:border-indigo-800 dark:bg-slate-900 dark:text-slate-200"
+                    className="h-9 w-full rounded-xl border border-indigo-200 bg-white px-3 font-mono text-base sm:text-xs text-slate-700 dark:border-indigo-800 dark:bg-slate-900 dark:text-slate-200"
                   />
                   <button
                     onClick={handleCopyLink}
@@ -204,7 +204,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('shares.input_password') || 'Leave empty for public access'}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs transition-all focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-base sm:text-xs transition-all focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
             </div>

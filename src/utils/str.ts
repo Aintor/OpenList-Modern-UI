@@ -55,6 +55,7 @@ export function formatDate(dateStr: string) {
 
 export const validateFilename = (
   name: string,
+  isRoot: boolean = false
 ): { valid: boolean; error?: string } => {
   if (!name || name.trim().length === 0) {
     return { valid: false, error: "empty_input" }
@@ -62,6 +63,9 @@ export const validateFilename = (
   const INVALID_CHARS = /[\/\\?<>*:|"]/
   if (INVALID_CHARS.test(name)) {
     return { valid: false, error: "invalid_filename_chars" }
+  }
+  if (isRoot && name.startsWith("@")) {
+    return { valid: false, error: "reserved_root_prefix" }
   }
 
   return { valid: true }

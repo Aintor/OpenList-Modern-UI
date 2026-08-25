@@ -66,6 +66,7 @@
   "toolbar": {
     "more": "更多",
     "refresh": "刷新",
+    "logout": "登出",
     "toggle_theme": "切換主題",
     "switch_lang": "切換語言",
     "toggle_markdown_toc": "是否顯示大綱",
@@ -325,6 +326,7 @@
   },
   "transfer": {
     "title": "傳輸列表",
+    "empty": "暫無傳輸任務",
     "settings": "傳輸設定",
     "section_concurrency": "同時進行任務數",
     "upload_concurrency": "同時上傳任務數",

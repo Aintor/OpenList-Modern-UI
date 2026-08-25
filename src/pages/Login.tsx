@@ -106,7 +106,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onContinue
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder={t('login.username-tips') || 'Username'}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs transition-all focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800/60 dark:focus:bg-slate-900"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-base sm:text-xs transition-all focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800/60 dark:focus:bg-slate-900"
               />
             </div>
           </div>
@@ -123,7 +123,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onContinue
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('login.password-tips') || 'Password'}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs transition-all focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800/60 dark:focus:bg-slate-900"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-base sm:text-xs transition-all focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800/60 dark:focus:bg-slate-900"
               />
             </div>
           </div>
@@ -144,7 +144,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onContinue
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.trim())}
                   placeholder={t('login.otp-tips') || '6-digit verification code'}
-                  className="h-10 w-full rounded-xl border border-indigo-200 bg-indigo-50/30 pl-9 pr-3 text-xs font-mono tracking-widest transition-all focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-indigo-900 dark:bg-indigo-950/30"
+                  className="h-10 w-full rounded-xl border border-indigo-200 bg-indigo-50/30 pl-9 pr-3 text-base sm:text-xs font-mono tracking-widest transition-all focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-indigo-900 dark:bg-indigo-950/30"
                 />
               </div>
             </div>

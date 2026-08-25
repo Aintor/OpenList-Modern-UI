@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { r } from '~/utils/request'
 import { Storage, Resp } from '~/types'
 import { notify } from '~/utils/notify'
+import { getFileSize } from '~/utils/str'
 import { useT } from '~/lang'
 import {
   HardDrive,
@@ -82,7 +83,7 @@ export const StoragesTab: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Header controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-slate-800 dark:text-white">
             {t('manage.sidemenu.storages') || 'Storage Mounts'}
@@ -92,7 +93,7 @@ export const StoragesTab: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
           <button
             onClick={fetchStorages}
             disabled={loading}
@@ -172,6 +173,25 @@ export const StoragesTab: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <span className="text-slate-400 dark:text-slate-500">{t('storages.common.remark') || '备注'}:</span>
                       <span className="truncate font-medium text-slate-700 dark:text-slate-300">{storage.remark}</span>
+                    </div>
+                  )}
+
+                  {storage.mount_details && (storage.mount_details.total_space ?? 0) > 0 && (
+                    <div className="pt-2 space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                        <span>{getFileSize(storage.mount_details.used_space ?? 0)} / {getFileSize(storage.mount_details.total_space ?? 0)}</span>
+                        <span>
+                          {Math.round(((storage.mount_details.used_space ?? 0) / (storage.mount_details.total_space ?? 1)) * 100)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-indigo-500 transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, Math.round(((storage.mount_details.used_space ?? 0) / (storage.mount_details.total_space ?? 1)) * 100))}%`
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

@@ -88,6 +88,15 @@
     background-color: var(--bg-dark-surface) !important;
     color: #f8fafc !important;
   }
+
+  /* Prevent iOS Safari viewport auto-zoom on input/textarea focus by guaranteeing 16px (1rem) on mobile */
+  @media (max-width: 639.98px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
 }
 
 /* Custom modern scrollbar */
@@ -123,6 +132,13 @@
   border: 1.5px solid var(--selection-area-border);
   border-radius: 6px;
   backdrop-filter: blur(1px);
+}
+
+/* Mobile Touch & Long-press Selection Optimization */
+.viselect-item {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Video.js v10 Seekbar Hover/Drag Time Tooltip & Preview Enhancements */

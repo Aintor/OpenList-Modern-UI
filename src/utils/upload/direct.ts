@@ -121,6 +121,7 @@ async function uploadSingle(params: SingleUploadParams): Promise<void> {
     let lastTime = Date.now()
     const startTime = Date.now()
     let slowCount = 0
+    let smoothedSpeed = 0
 
     const onAbort = () => {
       xhr.abort()
@@ -153,7 +154,9 @@ async function uploadSingle(params: SingleUploadParams): Promise<void> {
 
         let currentSpeed = 0
         if (duration >= 0.5) {
-          currentSpeed = Math.max(0, (e.loaded - lastLoaded) / duration)
+          const instantSpeed = Math.max(0, (e.loaded - lastLoaded) / duration)
+          smoothedSpeed = smoothedSpeed > 0 ? smoothedSpeed * 0.7 + instantSpeed * 0.3 : instantSpeed
+          currentSpeed = instantSpeed
           lastLoaded = e.loaded
           lastTime = now
 
@@ -165,19 +168,19 @@ async function uploadSingle(params: SingleUploadParams): Promise<void> {
             file.size >= directFallbackMinSizeMB * 1024 * 1024
           ) {
             const minSpeedBps = directFallbackMinSpeedKB * 1024
-            if (currentSpeed < minSpeedBps) {
+            if (smoothedSpeed < minSpeedBps) {
               slowCount += duration
               if (slowCount >= directFallbackDurationSec) {
                 cleanup()
                 xhr.abort()
                 return reject(
                   new DirectUploadSlowError(
-                    `Direct speed ${(currentSpeed / 1024).toFixed(1)} KB/s below threshold`
+                    `Direct speed ${(smoothedSpeed / 1024).toFixed(1)} KB/s below threshold`
                   )
                 )
               }
             } else {
-              slowCount = 0
+              slowCount = Math.max(0, slowCount - duration * 0.5)
             }
           }
         }
@@ -255,6 +258,7 @@ async function uploadChunked(params: ChunkedUploadParams): Promise<void> {
   let lastLoadedSum = 0
   const startTime = Date.now()
   let slowCount = 0
+  let smoothedSpeed = 0
 
   for (let i = 0; i < totalChunks; i++) {
     if (signal?.aborted) throw new Error('Upload canceled')
@@ -288,7 +292,9 @@ async function uploadChunked(params: ChunkedUploadParams): Promise<void> {
 
           let currentSpeed = 0
           if (duration >= 0.5) {
-            currentSpeed = Math.max(0, (totalLoaded - lastLoadedSum) / duration)
+            const instantSpeed = Math.max(0, (totalLoaded - lastLoadedSum) / duration)
+            smoothedSpeed = smoothedSpeed > 0 ? smoothedSpeed * 0.7 + instantSpeed * 0.3 : instantSpeed
+            currentSpeed = instantSpeed
             lastLoadedSum = totalLoaded
             lastTime = now
 
@@ -300,19 +306,19 @@ async function uploadChunked(params: ChunkedUploadParams): Promise<void> {
               file.size >= directFallbackMinSizeMB * 1024 * 1024
             ) {
               const minSpeedBps = directFallbackMinSpeedKB * 1024
-              if (currentSpeed < minSpeedBps) {
+              if (smoothedSpeed < minSpeedBps) {
                 slowCount += duration
                 if (slowCount >= directFallbackDurationSec) {
                   cleanup()
                   xhr.abort()
                   return reject(
                     new DirectUploadSlowError(
-                      `Direct chunk speed ${(currentSpeed / 1024).toFixed(1)} KB/s below threshold`
+                      `Direct chunk speed ${(smoothedSpeed / 1024).toFixed(1)} KB/s below threshold`
                     )
                   )
                 }
               } else {
-                slowCount = 0
+                slowCount = Math.max(0, slowCount - duration * 0.5)
               }
             }
           }

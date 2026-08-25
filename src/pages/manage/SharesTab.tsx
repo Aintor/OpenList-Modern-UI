@@ -188,95 +188,162 @@ export const SharesTab: React.FC = () => {
             <p className="text-sm font-semibold">{t('global.empty') || 'No active share links'}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[700px]">
-              <thead className="border-b border-slate-200/80 bg-slate-50 font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
-                <tr>
-                  <th className="p-3.5">{t('shares.files') || 'Target Path'}</th>
-                  <th className="p-3.5">{t('shares.id') || 'Share Code'}</th>
-                  <th className="p-3.5">{t('shares.creator') || 'Creator'}</th>
-                  <th className="p-3.5">{t('shares.pwd') || 'Password'}</th>
-                  <th className="p-3.5">{t('shares.accessed') || 'Accessed'}</th>
-                  <th className="p-3.5">{t('shares.expires') || 'Expires'}</th>
-                  <th className="p-3.5">{t('shares.status') || 'Status'}</th>
-                  <th className="p-3.5 text-right">{t('global.operations') || 'Actions'}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {shares.map((s) => {
-                  const accessDisplay = s.max_accessed > 0 ? `${s.accessed} / ${s.max_accessed}` : `${s.accessed}`
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[700px]">
+                <thead className="border-b border-slate-200/80 bg-slate-50 font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+                  <tr>
+                    <th className="p-3.5">{t('shares.files') || 'Target Path'}</th>
+                    <th className="p-3.5">{t('shares.id') || 'Share Code'}</th>
+                    <th className="p-3.5">{t('shares.creator') || 'Creator'}</th>
+                    <th className="p-3.5">{t('shares.pwd') || 'Password'}</th>
+                    <th className="p-3.5">{t('shares.accessed') || 'Accessed'}</th>
+                    <th className="p-3.5">{t('shares.expires') || 'Expires'}</th>
+                    <th className="p-3.5">{t('shares.status') || 'Status'}</th>
+                    <th className="p-3.5 text-right">{t('global.operations') || 'Actions'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {shares.map((s) => {
+                    const accessDisplay = s.max_accessed > 0 ? `${s.accessed} / ${s.max_accessed}` : `${s.accessed}`
 
-                  return (
-                    <tr key={s.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="p-3.5 max-w-[200px] truncate font-semibold text-slate-800 dark:text-slate-200" title={s.files?.join(', ')}>
-                        {s.files?.join(', ') || '/'}
-                      </td>
-                      <td className="p-3.5 font-mono text-indigo-600 dark:text-indigo-400 font-bold">
-                        {s.id}
-                      </td>
-                      <td className="p-3.5 text-slate-600 dark:text-slate-400">
-                        {s.creator || 'admin'}
-                      </td>
-                      <td className="p-3.5 font-mono">
-                        {s.pwd ? (
-                          <span className="inline-flex items-center space-x-1 text-slate-700 dark:text-slate-300">
-                            <Lock className="h-3 w-3 text-indigo-500 mr-1" />
-                            <span>{s.pwd}</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="p-3.5 font-mono text-slate-500">
-                        {accessDisplay}
-                      </td>
-                      <td className="p-3.5 text-slate-500 text-[11px]">
-                        {s.expires ? formatDate(s.expires) : (t('global.permanent') || 'Permanent')}
-                      </td>
-                      <td className="p-3.5">
-                        {getStatusBadge(s)}
-                      </td>
-                      <td className="p-3.5 text-right space-x-1">
-                        <button
-                          onClick={() => handleCopyFullMessage(s)}
-                          title={t('shares.copy_msg') || 'Copy share details'}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-400 transition-colors"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleCopyLink(s)}
-                          title="Copy Link"
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleEnable(s)}
-                          disabled={togglingId === s.id}
-                          title={s.disabled ? (t('global.enable') || 'Enable') : (t('global.disable') || 'Disable')}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          {s.disabled ? (
-                            <ToggleLeft className="h-4 w-4 text-slate-400" />
+                    return (
+                      <tr key={s.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="p-3.5 max-w-[200px] truncate font-semibold text-slate-800 dark:text-slate-200" title={s.files?.join(', ')}>
+                          {s.files?.join(', ') || '/'}
+                        </td>
+                        <td className="p-3.5 font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                          {s.id}
+                        </td>
+                        <td className="p-3.5 text-slate-600 dark:text-slate-400">
+                          {s.creator || 'admin'}
+                        </td>
+                        <td className="p-3.5 font-mono">
+                          {s.pwd ? (
+                            <span className="inline-flex items-center space-x-1 text-slate-700 dark:text-slate-300">
+                              <Lock className="h-3 w-3 text-indigo-500 mr-1" />
+                              <span>{s.pwd}</span>
+                            </span>
                           ) : (
-                            <ToggleRight className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                            <span className="text-slate-400">—</span>
                           )}
-                        </button>
-                        <button
-                          onClick={() => setDeletingShare(s)}
-                          title={t('global.delete') || 'Delete'}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="p-3.5 font-mono text-slate-500">
+                          {accessDisplay}
+                        </td>
+                        <td className="p-3.5 text-slate-500 text-[11px]">
+                          {s.expires ? formatDate(s.expires) : (t('global.permanent') || 'Permanent')}
+                        </td>
+                        <td className="p-3.5">
+                          {getStatusBadge(s)}
+                        </td>
+                        <td className="p-3.5 text-right space-x-1">
+                          <button
+                            onClick={() => handleCopyFullMessage(s)}
+                            title={t('shares.copy_msg') || 'Copy share details'}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-400 transition-colors"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleCopyLink(s)}
+                            title="Copy Link"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleToggleEnable(s)}
+                            disabled={togglingId === s.id}
+                            title={s.disabled ? (t('global.enable') || 'Enable') : (t('global.disable') || 'Disable')}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            {s.disabled ? (
+                              <ToggleLeft className="h-4 w-4 text-slate-400" />
+                            ) : (
+                              <ToggleRight className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setDeletingShare(s)}
+                            title={t('global.delete') || 'Delete'}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List View */}
+            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+              {shares.map((s) => {
+                const accessDisplay = s.max_accessed > 0 ? `${s.accessed} / ${s.max_accessed}` : `${s.accessed}`
+
+                return (
+                  <div key={s.id} className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <div className="font-bold text-sm text-slate-900 dark:text-white truncate" title={s.files?.join(', ')}>
+                          {s.files?.join(', ') || '/'}
+                        </div>
+                        <div className="flex items-center space-x-2 text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                          <span>ID: {s.id}</span>
+                          {s.pwd && (
+                            <span className="flex items-center text-slate-600 dark:text-slate-400 font-normal">
+                              <Lock className="h-3 w-3 mr-0.5 text-indigo-500" />
+                              {s.pwd}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="shrink-0">{getStatusBadge(s)}</div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-50 dark:border-slate-800/40 pt-2 font-mono">
+                      <span>{t('shares.accessed') || 'Accessed'}: {accessDisplay}</span>
+                      <span>{s.expires ? formatDate(s.expires) : (t('global.permanent') || 'Permanent')}</span>
+                    </div>
+
+                    <div className="flex items-center justify-end space-x-2 pt-1 border-t border-slate-50 dark:border-slate-800/40">
+                      <button
+                        onClick={() => handleCopyFullMessage(s)}
+                        className="flex items-center space-x-1 rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 cursor-pointer"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>{t('shares.copy_msg') || 'Copy'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleCopyLink(s)}
+                        className="flex items-center space-x-1 rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 cursor-pointer"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span>{t('global.link') || 'Link'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleToggleEnable(s)}
+                        disabled={togglingId === s.id}
+                        className="flex items-center space-x-1 rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 cursor-pointer"
+                      >
+                        {s.disabled ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4 text-indigo-600" />}
+                      </button>
+                      <button
+                        onClick={() => setDeletingShare(s)}
+                        className="flex items-center space-x-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-100 cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
 

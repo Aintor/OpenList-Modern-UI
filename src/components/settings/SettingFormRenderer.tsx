@@ -175,16 +175,16 @@ export const SettingFormRenderer: React.FC<SettingFormRendererProps> = ({
 
       {/* Global Actions Bar */}
       {schema.features?.allowSave !== false && (
-        <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+        <div className="sticky bottom-2 sm:bottom-0 -mx-1 sm:mx-0 -mb-1 sm:mb-0 p-3 sm:p-0 pt-3 sm:pt-6 bg-white/95 sm:bg-transparent dark:bg-slate-900/95 dark:sm:bg-transparent backdrop-blur-xl sm:backdrop-blur-none border border-slate-200/90 sm:border-0 sm:border-t sm:border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-2 sm:space-x-3 z-10 shadow-xl sm:shadow-none rounded-2xl sm:rounded-none">
           {schema.features?.allowRefresh !== false && (
             <button
               type="button"
               onClick={fetchSettings}
               disabled={loading || saving}
-              className="flex items-center space-x-1.5 rounded-xl border border-slate-200/80 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50"
+              className="flex items-center justify-center space-x-1.5 rounded-xl border border-slate-200/80 bg-white px-3 sm:px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>{t('global.refresh') || 'Refresh'}</span>
+              <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`} />
+              <span className="shrink-0">{t('global.refresh') || 'Refresh'}</span>
             </button>
           )}
 
@@ -193,10 +193,10 @@ export const SettingFormRenderer: React.FC<SettingFormRendererProps> = ({
               type="button"
               onClick={handleResetDefaults}
               disabled={loading || resetting}
-              className="flex items-center space-x-1.5 rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-2 text-xs font-semibold text-amber-700 shadow-xs hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/60 cursor-pointer disabled:opacity-50"
+              className="flex items-center justify-center space-x-1.5 rounded-xl border border-amber-200 bg-amber-50/50 px-3 sm:px-4 py-2 text-xs font-semibold text-amber-700 shadow-xs hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/60 cursor-pointer disabled:opacity-50"
             >
-              <RotateCcw className={`h-3.5 w-3.5 ${resetting ? 'animate-spin' : ''}`} />
-              <span>{t('manage.load_default_setting') || 'Load Defaults'}</span>
+              <RotateCcw className={`h-3.5 w-3.5 shrink-0 ${resetting ? 'animate-spin' : ''}`} />
+              <span className="shrink-0">{t('manage.load_default_setting') || 'Load Defaults'}</span>
             </button>
           )}
 
@@ -204,14 +204,14 @@ export const SettingFormRenderer: React.FC<SettingFormRendererProps> = ({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center space-x-1.5 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all dark:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer disabled:opacity-50"
+            className="flex items-center justify-center space-x-1.5 rounded-xl bg-indigo-600 px-4 sm:px-5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all dark:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer disabled:opacity-50"
           >
             {saving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
             ) : (
-              <Save className="h-3.5 w-3.5" />
+              <Save className="h-3.5 w-3.5 shrink-0" />
             )}
-            <span>{t('global.save') || 'Save'}</span>
+            <span className="shrink-0">{t('global.save') || 'Save'}</span>
           </button>
         </div>
       )}

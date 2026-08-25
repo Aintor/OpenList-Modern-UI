@@ -37,6 +37,7 @@
   "empty_input": "請輸入",
   "unsaved_changes_confirm": "您有未儲存的變更。是否確定要離開？",
   "invalid_filename_chars": "檔案名稱不能包含: / \\ ? < > * : | \"",
+  "reserved_root_prefix": "根目錄下不能使用以 @ 開頭的系統保留名稱",
   "invalid_regex": "正規表示式無效",
   "name": "名稱",
   "go_to_storages": "前往儲存",
@@ -55,6 +56,14 @@
     "doc": "文件"
   },
   "readonly": "唯讀",
+  "admin": "管理員",
+  "user": "一般使用者",
+  "guest": "訪客",
+  "language": "語言",
+  "logout": "登出",
+  "theme_light": "淺色",
+  "theme_dark": "深色",
+  "theme_auto": "跟隨系統",
   "not_found": {
     "title": "資料夾不存在",
     "subtitle": "請檢查存取路徑或返回首頁",

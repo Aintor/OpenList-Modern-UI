@@ -66,6 +66,7 @@
   "toolbar": {
     "more": "More",
     "refresh": "Refresh",
+    "logout": "Logout",
     "toggle_theme": "Toggle Theme",
     "switch_lang": "Switch Language",
     "toggle_markdown_toc": "Toggle Outline",
@@ -325,6 +326,7 @@
   },
   "transfer": {
     "title": "Transfers",
+    "empty": "No active transfers",
     "settings": "Transfer Settings",
     "section_concurrency": "Concurrent Tasks",
     "upload_concurrency": "Upload Tasks",
