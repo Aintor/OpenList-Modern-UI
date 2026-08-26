@@ -65,6 +65,8 @@
 
     --selection-area-bg: rgba(24, 144, 255, 0.15);
     --selection-area-border: rgba(24, 144, 255, 0.7);
+
+    --audio-slider-track: rgba(0, 0, 0, 0.12);
   }
 
   body {
@@ -76,9 +78,11 @@
   }
 
   html.dark body,
-  .dark body {
+  .dark body,
+  html.dark {
     background-color: var(--bg-dark-base);
     color: #f8fafc;
+    --audio-slider-track: rgba(255, 255, 255, 0.18);
   }
 
   /* Global dark mode focus prevention against white-on-white text */

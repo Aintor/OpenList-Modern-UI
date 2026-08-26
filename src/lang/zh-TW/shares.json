@@ -22,21 +22,31 @@
   "header": "頂部説明",
   "order_by": "排序依據",
   "order_bys": {
+    "default": "系統預設",
     "name": "名稱",
     "size": "大小",
     "modified": "修改時間"
   },
   "order_direction": "排序方向",
   "order_directions": {
+    "default": "系統預設",
     "asc": "升序",
     "desc": "降序"
   },
-  "extract_folder": "文件夾順序",
+  "extract_folder": "資料夾順序",
   "extract_folders": {
-    "front": "文件夾置頂",
-    "back": "文件夾置底"
+    "default": "系統預設",
+    "front": "資料夾置頂",
+    "back": "資料夾置底"
   },
   "input_password": "請輸入分享碼",
-  "copy_msg": "複製鏈接",
-  "no_permission_tip": "創建分享需要啓用“分享”權限。"
+  "copy_msg": "複製連結",
+  "no_permission_tip": "建立分享需要啟用「分享」權限。",
+  "advanced_settings": "進階設定",
+  "custom_expires": "自訂到期時間",
+  "random_pwd": "產生隨機分享碼",
+  "expires_placeholder": "yyyy-MM-dd HH:mm:ss 或 +1w1d",
+  "selected_items": "已選 {{count}} 個項目",
+  "open_folder": "進入",
+  "select_current_dir": "選擇當前目錄"
 }

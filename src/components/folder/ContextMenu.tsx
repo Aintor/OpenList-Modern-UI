@@ -40,7 +40,7 @@ interface ContextMenuProps {
   onRename: (obj: StoreObj) => void
   onBatchRename?: (objs: StoreObj[]) => void
   onDelete: (objs: StoreObj[]) => void
-  onShare: (obj: StoreObj) => void
+  onShare: (objs: StoreObj[]) => void
   onCopyMove: (objs: StoreObj[], action: 'copy' | 'move') => void
   onPackageDownload?: (objs: StoreObj[]) => void
   // Blank area actions
@@ -430,17 +430,21 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         </button>
       )}
 
-      {/* Single Item: Share */}
-      {!isMultiple && obj && !isShare && (
+      {/* Share (Single or Multiple items) */}
+      {!isShare && targets.length > 0 && (
         <button
           onClick={() => {
-            onShare(obj)
+            onShare(targets)
             onClose()
           }}
           className="flex w-full items-center space-x-2 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors cursor-pointer"
         >
           <Share2 className="h-3.5 w-3.5" />
-          <span>{t('home.toolbar.share') || 'Share'}</span>
+          <span>
+            {isMultiple
+              ? `${t('home.toolbar.share') || 'Share'} (${targets.length})`
+              : t('home.toolbar.share') || 'Share'}
+          </span>
         </button>
       )}
 

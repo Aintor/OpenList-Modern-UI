@@ -21,6 +21,7 @@
     "@videojs/react": "10.0.0-beta.29",
     "@viselect/vanilla": "^3.9.0",
     "artplayer": "^5.2.1",
+    "audio-decode": "^3.12.0",
     "axios": "^1.7.9",
     "client-zip": "^2.5.0",
     "clsx": "^2.1.1",

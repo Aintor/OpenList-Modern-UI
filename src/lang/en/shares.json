@@ -22,21 +22,31 @@
   "header": "Header Description",
   "order_by": "Order By",
   "order_bys": {
+    "default": "Default",
     "name": "Name",
     "size": "Size",
     "modified": "Modified"
   },
   "order_direction": "Order Direction",
   "order_directions": {
+    "default": "Default",
     "asc": "Ascending",
     "desc": "Descending"
   },
   "extract_folder": "Folder Order",
   "extract_folders": {
+    "default": "Default",
     "front": "Folders on Top",
     "back": "Folders at Bottom"
   },
   "input_password": "Please enter Share Code",
   "copy_msg": "Copy link",
-  "no_permission_tip": "To create a share, you need \"Share\" permission."
+  "no_permission_tip": "To create a share, you need \"Share\" permission.",
+  "advanced_settings": "Advanced Settings",
+  "custom_expires": "Custom Expiration",
+  "random_pwd": "Generate random share code",
+  "expires_placeholder": "yyyy-MM-dd HH:mm:ss or +1w1d",
+  "selected_items": "{{count}} items selected",
+  "open_folder": "Enter",
+  "select_current_dir": "Select Current Directory"
 }

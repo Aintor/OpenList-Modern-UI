@@ -87,7 +87,7 @@ export function App() {
   const [isOfflineDownloadOpen, setIsOfflineDownloadOpen] = useState(false)
   const [copyMoveState, setCopyMoveState] = useState<{ targets: Obj[]; action: 'copy' | 'move' } | null>(null)
   const [batchRenameTargets, setBatchRenameTargets] = useState<Obj[]>([])
-  const [shareTarget, setShareTarget] = useState<Obj | null>(null)
+  const [shareTargets, setShareTargets] = useState<Obj[]>([])
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
 
   // Context Menu state
@@ -361,6 +361,7 @@ export function App() {
                   onOpenPackageDownload={(objs) =>
                     useTransferStore.getState().addPackageTask(objs, currentPath, password)
                   }
+                  onOpenShare={(objs) => setShareTargets(objs)}
                 />
               )}
 
@@ -417,7 +418,7 @@ export function App() {
         onRename={(obj) => setRenameTarget(obj)}
         onBatchRename={(objs) => setBatchRenameTargets(objs)}
         onDelete={(objs) => setDeleteTargets(objs)}
-        onShare={(obj) => setShareTarget(obj)}
+        onShare={(objs) => setShareTargets(objs)}
         onCopyMove={(objs, action) => setCopyMoveState({ targets: objs, action })}
         onPackageDownload={(objs) =>
           useTransferStore.getState().addPackageTask(objs, currentPath, password)
@@ -456,9 +457,9 @@ export function App() {
       />
 
       <ShareModal
-        target={shareTarget}
-        isOpen={shareTarget !== null}
-        onClose={() => setShareTarget(null)}
+        targets={shareTargets}
+        isOpen={shareTargets.length > 0}
+        onClose={() => setShareTargets([])}
         currentPath={currentPath}
       />
 

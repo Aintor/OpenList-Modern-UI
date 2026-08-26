@@ -22,21 +22,31 @@
   "header": "顶部说明",
   "order_by": "排序依据",
   "order_bys": {
+    "default": "系统默认",
     "name": "名称",
     "size": "大小",
     "modified": "修改时间"
   },
   "order_direction": "排序方向",
   "order_directions": {
+    "default": "系统默认",
     "asc": "升序",
     "desc": "降序"
   },
   "extract_folder": "文件夹顺序",
   "extract_folders": {
+    "default": "系统默认",
     "front": "文件夹置顶",
     "back": "文件夹置底"
   },
   "input_password": "请输入分享码",
   "copy_msg": "复制链接",
-  "no_permission_tip": "创建分享需要启用“分享”权限。"
+  "no_permission_tip": "创建分享需要启用“分享”权限。",
+  "advanced_settings": "高级选项",
+  "custom_expires": "自定义过期时间",
+  "random_pwd": "随机生成分享码",
+  "expires_placeholder": "yyyy-MM-dd HH:mm:ss 或 +1w1d",
+  "selected_items": "已选 {{count}} 个项目",
+  "open_folder": "进入",
+  "select_current_dir": "选择当前目录"
 }

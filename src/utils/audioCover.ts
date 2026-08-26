@@ -98,6 +98,44 @@ export async function getAudioCover(
       const ext = obj.name.toLowerCase().split('.').pop() || ''
       const mimeType = MIME_MAP[ext] || 'audio/mpeg'
 
+async function readResponseSlice(resp: Response, maxBytes: number): Promise<Uint8Array | null> {
+  if (!resp.body) {
+    const buf = await resp.arrayBuffer()
+    return new Uint8Array(buf).subarray(0, maxBytes)
+  }
+
+  if (resp.status === 206) {
+    const buf = await resp.arrayBuffer()
+    return new Uint8Array(buf)
+  }
+
+  const reader = resp.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+
+  try {
+    while (total < maxBytes) {
+      const { done, value } = await reader.read()
+      if (done || !value) break
+      const take = Math.min(value.length, maxBytes - total)
+      chunks.push(value.subarray(0, take))
+      total += take
+      if (total >= maxBytes) break
+    }
+  } finally {
+    reader.cancel().catch(() => {})
+  }
+
+  if (total === 0) return null
+  const res = new Uint8Array(total)
+  let off = 0
+  for (const c of chunks) {
+    res.set(c, off)
+    off += c.length
+  }
+  return res
+}
+
       // Step 1: Probe Head Range (0-524288 bytes)
       try {
         const rangeResp = await fetch(downloadUrl, {
@@ -105,40 +143,9 @@ export async function getAudioCover(
         })
 
         if (rangeResp.ok || rangeResp.status === 206) {
-          const arrayBuffer = await rangeResp.arrayBuffer()
-          const uint8 = new Uint8Array(arrayBuffer)
-          const metadata = await mm.parseBuffer(uint8, {
-            mimeType,
-            path: obj.name,
-            size: obj.size,
-          })
-
-          const cover = mm.selectCover(metadata.common.picture)
-          if (cover && cover.data && cover.data.length > 0) {
-            const blob = new Blob([cover.data as unknown as BlobPart], {
-              type: cover.format || 'image/jpeg',
-            })
-            const blobUrl = URL.createObjectURL(blob)
-            memoryCoverCache.set(cacheKey, blobUrl)
-            return blobUrl
-          }
-        }
-      } catch (rangeErr) {
-        console.debug('[AudioCover] Head range probe error:', rangeErr)
-      }
-
-      // Step 2: For M4A/AAC/MP4 where metadata (moov) is at the tail of the file:
-      // Send Range request to the TAIL (last 512KB)
-      if (obj.size && obj.size > 524288 && (ext === 'm4a' || ext === 'aac' || ext === 'mp4' || ext === 'alac' || ext === 'wav')) {
-        try {
-          const tailStart = Math.max(0, obj.size - 524288)
-          const tailResp = await fetch(downloadUrl, {
-            headers: { Range: `bytes=${tailStart}-${obj.size - 1}` },
-          })
-          if (tailResp.ok || tailResp.status === 206) {
-            const buf = await tailResp.arrayBuffer()
-            const tailUint8 = new Uint8Array(buf)
-            const metadata = await mm.parseBuffer(tailUint8, {
+          const uint8 = await readResponseSlice(rangeResp, 524288)
+          if (uint8) {
+            const metadata = await mm.parseBuffer(uint8, {
               mimeType,
               path: obj.name,
               size: obj.size,
@@ -153,6 +160,41 @@ export async function getAudioCover(
               memoryCoverCache.set(cacheKey, blobUrl)
               return blobUrl
             }
+          }
+        }
+      } catch (rangeErr) {
+        console.debug('[AudioCover] Head range probe error:', rangeErr)
+      }
+
+      // Step 2: For M4A/AAC/MP4 where metadata (moov) is at the tail of the file:
+      // Send Range request to the TAIL (last 512KB)
+      if (obj.size && obj.size > 524288 && (ext === 'm4a' || ext === 'aac' || ext === 'mp4' || ext === 'alac' || ext === 'wav')) {
+        try {
+          const tailStart = Math.max(0, obj.size - 524288)
+          const tailResp = await fetch(downloadUrl, {
+            headers: { Range: `bytes=${tailStart}-${obj.size - 1}` },
+          })
+          if (tailResp.status === 206) {
+            const tailUint8 = await readResponseSlice(tailResp, 524288)
+            if (tailUint8) {
+              const metadata = await mm.parseBuffer(tailUint8, {
+                mimeType,
+                path: obj.name,
+                size: obj.size,
+              })
+
+              const cover = mm.selectCover(metadata.common.picture)
+              if (cover && cover.data && cover.data.length > 0) {
+                const blob = new Blob([cover.data as unknown as BlobPart], {
+                  type: cover.format || 'image/jpeg',
+                })
+                const blobUrl = URL.createObjectURL(blob)
+                memoryCoverCache.set(cacheKey, blobUrl)
+                return blobUrl
+              }
+            }
+          } else {
+            tailResp.body?.getReader().cancel().catch(() => {})
           }
         } catch (tailErr) {
           console.debug('[AudioCover] Tail range probe error:', tailErr)

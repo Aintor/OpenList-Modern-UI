@@ -18,6 +18,7 @@ import {
   X,
   Archive,
   ArrowUp,
+  Share2,
 } from 'lucide-react'
 import { useObjStore, OrderBy } from '~/store/useObjStore'
 import { useUserStore } from '~/store/useUserStore'
@@ -37,6 +38,7 @@ interface ToolbarProps {
   onOpenCopyMove: (objs: Obj[], action: 'copy' | 'move') => void
   onOpenOfflineDownload: () => void
   onOpenPackageDownload?: (objs: Obj[]) => void
+  onOpenShare?: (objs: Obj[]) => void
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -47,6 +49,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onOpenCopyMove,
   onOpenOfflineDownload,
   onOpenPackageDownload,
+  onOpenShare,
 }) => {
   const {
     objs,
@@ -375,6 +378,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   className="rounded-full p-1.5 sm:p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
                 >
                   <Edit2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
+            )}
+
+            {/* Share */}
+            {onOpenShare && (
+              <Tooltip content={t('home.toolbar.share') || '分享'} side="top">
+                <button
+                  onClick={() => onOpenShare(selectedObjs)}
+                  className="rounded-full p-1.5 sm:p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                >
+                  <Share2 className="h-4 w-4" />
                 </button>
               </Tooltip>
             )}

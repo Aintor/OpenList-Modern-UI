@@ -16,8 +16,11 @@ import {
   ToggleLeft,
   ToggleRight,
   ExternalLink,
+  Plus,
+  Edit3,
 } from 'lucide-react'
 import { ConfirmModal } from '~/components/ui/ConfirmModal'
+import { AddOrEditShareModal } from './AddOrEditShareModal'
 
 export interface ShareItem {
   id: string
@@ -41,6 +44,8 @@ export const SharesTab: React.FC = () => {
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [deletingShare, setDeletingShare] = useState<ShareItem | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingShareId, setEditingShareId] = useState<string | null>(null)
 
   const fetchShares = async () => {
     setLoading(true)
@@ -153,17 +158,17 @@ export const SharesTab: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-slate-800 dark:text-white">
             {t('manage.sidemenu.shares') || 'Shares Management'}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('shares.no_permission_tip') ? '查看、复制与停用所有公开分享链接' : 'Inspect, copy, toggle, and revoke all generated file and folder share links'}
+            {t('shares.no_permission_tip') ? '查看、创建、编辑与停用所有公开分享链接' : 'Inspect, create, edit, copy, toggle, and revoke all generated share links'}
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
           <button
             onClick={fetchShares}
             disabled={loading}
@@ -171,6 +176,17 @@ export const SharesTab: React.FC = () => {
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>{t('global.refresh') || 'Refresh'}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setEditingShareId(null)
+              setIsAddModalOpen(true)
+            }}
+            className="flex items-center space-x-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>{t('global.add') || 'Create Share'}</span>
           </button>
         </div>
       </div>
@@ -191,7 +207,7 @@ export const SharesTab: React.FC = () => {
           <>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
+              <table className="w-full text-left text-xs min-w-[750px]">
                 <thead className="border-b border-slate-200/80 bg-slate-50 font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
                   <tr>
                     <th className="p-3.5">{t('shares.files') || 'Target Path'}</th>
@@ -240,16 +256,26 @@ export const SharesTab: React.FC = () => {
                         </td>
                         <td className="p-3.5 text-right space-x-1">
                           <button
+                            onClick={() => {
+                              setEditingShareId(s.id)
+                              setIsAddModalOpen(true)
+                            }}
+                            title={t('global.edit') || 'Edit Share'}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleCopyFullMessage(s)}
                             title={t('shares.copy_msg') || 'Copy share details'}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-400 transition-colors"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-400 transition-colors cursor-pointer"
                           >
                             <Copy className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleCopyLink(s)}
                             title="Copy Link"
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                           >
                             <ExternalLink className="h-4 w-4" />
                           </button>
@@ -257,7 +283,7 @@ export const SharesTab: React.FC = () => {
                             onClick={() => handleToggleEnable(s)}
                             disabled={togglingId === s.id}
                             title={s.disabled ? (t('global.enable') || 'Enable') : (t('global.disable') || 'Disable')}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                           >
                             {s.disabled ? (
                               <ToggleLeft className="h-4 w-4 text-slate-400" />
@@ -310,7 +336,17 @@ export const SharesTab: React.FC = () => {
                       <span>{s.expires ? formatDate(s.expires) : (t('global.permanent') || 'Permanent')}</span>
                     </div>
 
-                    <div className="flex items-center justify-end space-x-2 pt-1 border-t border-slate-50 dark:border-slate-800/40">
+                    <div className="flex items-center justify-end space-x-2 pt-1 border-t border-slate-50 dark:border-slate-800/40 flex-wrap gap-y-1.5">
+                      <button
+                        onClick={() => {
+                          setEditingShareId(s.id)
+                          setIsAddModalOpen(true)
+                        }}
+                        className="flex items-center space-x-1 rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 cursor-pointer"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        <span>{t('global.edit') || 'Edit'}</span>
+                      </button>
                       <button
                         onClick={() => handleCopyFullMessage(s)}
                         className="flex items-center space-x-1 rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 cursor-pointer"
@@ -358,6 +394,16 @@ export const SharesTab: React.FC = () => {
         loading={deleteLoading}
         onClose={() => setDeletingShare(null)}
         onConfirm={handleConfirmDelete}
+      />
+
+      <AddOrEditShareModal
+        shareId={editingShareId}
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false)
+          setEditingShareId(null)
+        }}
+        onSuccess={fetchShares}
       />
     </div>
   )
