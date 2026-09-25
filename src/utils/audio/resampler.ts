@@ -1,6 +1,22 @@
 /**
- * High-performance Linear PCM Audio Resampler
- * Converts multi-channel Float32Array audio from any source sampleRate to target AudioContext.sampleRate
+ * Audiophile-Grade Bandlimited Windowed-Sinc (Lanczos-3) Audio Resampler
+ * Converts multi-channel Float32Array audio between arbitrary sample rates with ideal anti-aliasing filtering.
+ */
+
+function sinc(x: number): number {
+  if (Math.abs(x) < 1e-7) return 1.0
+  const pix = Math.PI * x
+  return Math.sin(pix) / pix
+}
+
+function lanczos(x: number, a: number): number {
+  if (Math.abs(x) >= a) return 0
+  return sinc(x) * sinc(x / a)
+}
+
+/**
+ * Resamples multi-channel PCM audio using Bandlimited Lanczos-3 Windowed Sinc Interpolation.
+ * When downsampling (fromSampleRate > toSampleRate), dynamically applies an anti-aliasing Nyquist filter.
  */
 export function resamplePCM(
   inputChannels: Float32Array[],
@@ -26,23 +42,47 @@ export function resamplePCM(
 
   const numChannels = inputChannels.length
   const outputChannels: Float32Array[] = new Array(numChannels)
-
   for (let ch = 0; ch < numChannels; ch++) {
-    const inData = inputChannels[ch]
-    const outData = new Float32Array(outLength)
+    outputChannels[ch] = new Float32Array(outLength)
+  }
 
-    for (let i = 0; i < outLength; i++) {
-      const pos = i * ratio
-      const idx = Math.floor(pos)
-      const frac = pos - idx
+  // Lanczos kernel radius a = 3 (6 taps for upsampling, widened for downsampling)
+  const a = 3
+  const cutoff = Math.min(1.0, 1.0 / ratio)
+  const filterRadius = Math.ceil(a / cutoff)
+  const maxTaps = filterRadius * 2 + 4
+  const tapIndices = new Int32Array(maxTaps)
+  const tapWeights = new Float64Array(maxTaps)
 
-      const s0 = inData[idx] ?? 0
-      const s1 = idx + 1 < inLength ? inData[idx + 1] : s0
+  for (let i = 0; i < outLength; i++) {
+    const center = i * ratio
+    const minIdx = Math.floor(center - filterRadius)
+    const maxIdx = Math.ceil(center + filterRadius)
 
-      outData[i] = s0 + frac * (s1 - s0)
+    let tapCount = 0
+    let weightSum = 0
+
+    for (let j = minIdx; j <= maxIdx; j++) {
+      const dist = (j - center) * cutoff
+      if (Math.abs(dist) < a) {
+        const w = cutoff * lanczos(dist, a)
+        tapIndices[tapCount] = Math.max(0, Math.min(inLength - 1, j))
+        tapWeights[tapCount] = w
+        weightSum += w
+        tapCount++
+      }
     }
 
-    outputChannels[ch] = outData
+    const norm = weightSum > 0 ? 1 / weightSum : 1
+
+    for (let ch = 0; ch < numChannels; ch++) {
+      const inData = inputChannels[ch]
+      let sampleSum = 0
+      for (let k = 0; k < tapCount; k++) {
+        sampleSum += inData[tapIndices[k]] * tapWeights[k]
+      }
+      outputChannels[ch][i] = sampleSum * norm
+    }
   }
 
   return outputChannels

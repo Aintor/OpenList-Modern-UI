@@ -144,26 +144,30 @@ export class AudioEngine {
   }
 
   public on<K extends AudioEngineEventName>(event: K, listener: AudioEngineEvents[K]): () => void {
-    if (!this.listeners[event]) {
-      this.listeners[event] = new Set() as any
+    let set = this.listeners[event] as Set<AudioEngineEvents[K]> | undefined
+    if (!set) {
+      set = new Set<AudioEngineEvents[K]>()
+      this.listeners[event] = set as never
     }
-    this.listeners[event]!.add(listener)
+    set.add(listener)
     return () => this.off(event, listener)
   }
 
   public off<K extends AudioEngineEventName>(event: K, listener: AudioEngineEvents[K]): void {
-    this.listeners[event]?.delete(listener)
+    const set = this.listeners[event] as Set<AudioEngineEvents[K]> | undefined
+    set?.delete(listener)
   }
 
   private emit<K extends AudioEngineEventName>(
     event: K,
     ...args: Parameters<AudioEngineEvents[K]>
   ): void {
-    const handlers = this.listeners[event]
+    const handlers = this.listeners[event] as Set<AudioEngineEvents[K]> | undefined
     if (handlers) {
-      handlers.forEach((fn: any) => {
+      handlers.forEach((fn) => {
         try {
-          fn(...args)
+          const invoker = fn as (...params: typeof args) => void
+          invoker(...args)
         } catch (e) {
           console.error(`[AudioEngine] Error in '${event}' listener:`, e)
         }
@@ -230,8 +234,9 @@ export class AudioEngine {
       try {
         await this.nativePlayer.play()
         this.setState('playing')
-      } catch (err: any) {
-        if (err?.name === 'NotAllowedError') {
+      } catch (err: unknown) {
+        const errorObj = err instanceof Error ? err : new Error(String(err))
+        if (errorObj.name === 'NotAllowedError') {
           // Autoplay policy prevented playback until user clicks - DO NOT fallback to WASM!
           this.setState('paused')
         } else {
@@ -252,7 +257,7 @@ export class AudioEngine {
           true
         )
         this.setState('playing')
-      } catch (err: any) {
+      } catch (err: unknown) {
         this.setState('error')
         this.emit('error', err instanceof Error ? err : new Error(String(err)))
       }

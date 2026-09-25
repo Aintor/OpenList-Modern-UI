@@ -3,7 +3,7 @@ import { Obj } from '~/types'
 import { fsGet, fsList } from '~/utils/api'
 import { useObjStore } from '~/store/useObjStore'
 
-import { isAudioObject } from '~/utils/audioCover'
+import { isAudioObject } from '~/utils/audioMeta'
 
 export interface AudioTrack {
   obj: Obj

@@ -8,6 +8,20 @@ export interface StreamingDecoderOptions {
   minBufferAhead?: number // Minimum buffer ahead before resuming download (default: 15)
 }
 
+export interface DecodedPCMBlock {
+  startSample: number
+  channelData: Float32Array[]
+}
+
+export type StreamingDecoderFn = {
+  (chunk?: Uint8Array): Promise<AudioPCMChunk | null | undefined>
+  free?: () => void
+}
+
+export type CodecInitializer = () => Promise<StreamingDecoderFn>
+
+export type AudioDecodeModule = typeof decode & Record<string, CodecInitializer | unknown>
+
 /**
  * Streaming Decoder Session with Universal Range-Broker & Sliding Window Backpressure Control
  * Translates decoder requirements into on-demand HTTP Range requests.
@@ -15,7 +29,7 @@ export interface StreamingDecoderOptions {
  */
 export class StreamingDecoderSession {
   private abortController: AbortController | null = null
-  private accumulatedChannels: Float32Array[] = []
+  private recentBlocks: DecodedPCMBlock[] = []
   private sampleRate: number = 44100
   private totalSamplesDecoded: number = 0
   private knownDuration: number = 0
@@ -85,17 +99,57 @@ export class StreamingDecoderSession {
   }
 
   /**
-   * Returns a copy of decoded PCM starting from startSample to the end of accumulated buffer
+   * Returns a copy of decoded PCM starting from startSample to the end of bounded memory buffer
    */
   public getSliceFromSample(startSample: number): Float32Array[] | null {
-    if (this.accumulatedChannels.length === 0) return null
+    if (this.recentBlocks.length === 0 || this.sampleRate <= 0) return null
     if (startSample >= this.totalSamplesDecoded) return null
 
-    const safeStart = Math.max(0, Math.floor(startSample))
-    const remaining = this.totalSamplesDecoded - safeStart
-    if (remaining <= 0) return null
+    const firstBlock = this.recentBlocks[0]
+    if (startSample < firstBlock.startSample) {
+      // Requested sample has already been pruned from the sliding memory window
+      return null
+    }
 
-    return this.accumulatedChannels.map((ch) => ch.slice(safeStart))
+    const matchingBlocks = this.recentBlocks.filter((b) => {
+      const blockEnd = b.startSample + b.channelData[0].length
+      return blockEnd > startSample
+    })
+
+    if (matchingBlocks.length === 0) return null
+
+    const numChannels = matchingBlocks[0].channelData.length
+    let totalLen = 0
+
+    for (let i = 0; i < matchingBlocks.length; i++) {
+      const b = matchingBlocks[i]
+      const blockLen = b.channelData[0].length
+      const offsetInBlock = i === 0 ? Math.max(0, startSample - b.startSample) : 0
+      totalLen += blockLen - offsetInBlock
+    }
+
+    if (totalLen <= 0) return null
+
+    const result: Float32Array[] = new Array(numChannels)
+    for (let ch = 0; ch < numChannels; ch++) {
+      result[ch] = new Float32Array(totalLen)
+    }
+
+    let writeOffset = 0
+    for (let i = 0; i < matchingBlocks.length; i++) {
+      const b = matchingBlocks[i]
+      const blockLen = b.channelData[0].length
+      const offsetInBlock = i === 0 ? Math.max(0, startSample - b.startSample) : 0
+      const count = blockLen - offsetInBlock
+
+      for (let ch = 0; ch < numChannels; ch++) {
+        const src = b.channelData[ch].subarray(offsetInBlock, offsetInBlock + count)
+        result[ch].set(src, writeOffset)
+      }
+      writeOffset += count
+    }
+
+    return result
   }
 
   /**
@@ -149,44 +203,67 @@ export class StreamingDecoderSession {
    */
   private async probeMetadata(signal: AbortSignal): Promise<void> {
     try {
-      const probeResp = await fetch(this.rawUrl, {
-        headers: { Range: 'bytes=0-131072' }, // Probe first 128KB
+      const probeBytes = 131072 // 128 KB
+      const headResp = await fetch(this.rawUrl, {
+        headers: { Range: `bytes=0-${probeBytes - 1}` },
         signal,
       })
 
-      if (probeResp.ok || probeResp.status === 206) {
-        let uint8: Uint8Array | null = null
-
-        if (probeResp.status === 206 || !probeResp.body) {
-          const buf = await probeResp.arrayBuffer()
-          uint8 = new Uint8Array(buf)
+      if (headResp.ok || headResp.status === 206) {
+        let headUint8: Uint8Array
+        if (headResp.status === 206) {
+          const buf = await headResp.arrayBuffer()
+          headUint8 = new Uint8Array(buf)
         } else {
-          // If server returned 200 (ignored Range), read ONLY first 128KB and immediately cancel!
-          const reader = probeResp.body.getReader()
-          try {
-            const { value } = await reader.read()
-            uint8 = value ? value.subarray(0, 131072) : null
-          } finally {
-            reader.cancel().catch(() => {})
+          // Truncate 200 OK stream immediately
+          const reader = headResp.body?.getReader()
+          if (!reader) {
+            const buf = await headResp.arrayBuffer()
+            headUint8 = new Uint8Array(buf).subarray(0, probeBytes)
+          } else {
+            const chunks: Uint8Array[] = []
+            let readBytes = 0
+            try {
+              while (readBytes < probeBytes) {
+                const { done, value } = await reader.read()
+                if (done || !value) break
+                const take = Math.min(value.length, probeBytes - readBytes)
+                chunks.push(value.subarray(0, take))
+                readBytes += take
+                if (readBytes >= probeBytes) break
+              }
+            } finally {
+              reader.cancel().catch(() => {})
+            }
+            headUint8 = new Uint8Array(readBytes)
+            let offset = 0
+            for (const c of chunks) {
+              headUint8.set(c, offset)
+              offset += c.length
+            }
           }
         }
 
-        if (uint8) {
-          const detectedFormat = detectFormatFromMagicBytes(uint8)
-          const ext = detectedFormat || this.filename.toLowerCase().split('.').pop() || 'flac'
-          const meta = await mm.parseBuffer(uint8, {
-            path: this.filename,
-            size: this.estimatedSize || undefined,
-            mimeType: `audio/${ext}`,
-          })
+        const format = detectFormatFromMagicBytes(headUint8)
+        const mimeMap: Record<string, string> = {
+          flac: 'audio/flac',
+          m4a: 'audio/mp4',
+          oga: 'audio/ogg',
+          mp3: 'audio/mpeg',
+          wav: 'audio/wav',
+          aiff: 'audio/aiff',
+          webm: 'audio/webm',
+        }
 
-          if (meta.format.duration && meta.format.duration > 0) {
-            this.knownDuration = meta.format.duration
-            if (meta.format.sampleRate) {
-              this.sampleRate = meta.format.sampleRate
-            }
-            this.onDuration?.(this.knownDuration)
-          }
+        const meta = await mm.parseBuffer(headUint8, {
+          mimeType: mimeMap[format] || 'audio/flac',
+          path: this.filename,
+          size: this.estimatedSize,
+        })
+
+        if (meta.format.duration && meta.format.duration > 0) {
+          this.knownDuration = meta.format.duration
+          this.onDuration?.(this.knownDuration)
         }
       }
     } catch {
@@ -210,7 +287,9 @@ export class StreamingDecoderSession {
       // 2. Auto-detect format by Magic Bytes and probe container header layout
       const { format, m4aInfo } = await rangeSource.probeHeader(signal)
       const formatName = format || 'flac'
-      const codecInit = (decode as Record<string, any>)[formatName] || (decode as Record<string, any>)['flac']
+
+      const decodeModule = decode as unknown as AudioDecodeModule
+      const codecInit = (decodeModule[formatName] || decodeModule['flac']) as CodecInitializer | undefined
       const dec = typeof codecInit === 'function' ? await codecInit() : null
 
       if (!dec) {
@@ -396,8 +475,8 @@ export class StreamingDecoderSession {
         this.onDuration?.(this.knownDuration)
       }
       this.onComplete?.()
-    } catch (err: any) {
-      if (signal.aborted || err?.name === 'AbortError') return
+    } catch (err: unknown) {
+      if (signal.aborted || (err instanceof Error && err.name === 'AbortError')) return
       console.error('[AudioStream] ❌ Streaming decoder error:', err)
       this.onError?.(err instanceof Error ? err : new Error(String(err)))
     }
@@ -410,27 +489,24 @@ export class StreamingDecoderSession {
 
     this.sampleRate = rate
 
-    if (this.accumulatedChannels.length === 0) {
-      this.accumulatedChannels = newChannels.map((ch) => new Float32Array(ch))
-      this.totalSamplesDecoded = chunkLength
-      return
+    this.recentBlocks.push({
+      startSample: this.totalSamplesDecoded,
+      channelData: newChannels,
+    })
+    this.totalSamplesDecoded += chunkLength
+
+    // Prune blocks older than 30s behind current playback time to bound RAM < 15MB
+    const retainThresholdSample = Math.max(
+      0,
+      Math.floor((this.currentPlaybackTime - 30) * this.sampleRate)
+    )
+
+    while (
+      this.recentBlocks.length > 1 &&
+      this.recentBlocks[0].startSample + this.recentBlocks[0].channelData[0].length < retainThresholdSample
+    ) {
+      this.recentBlocks.shift()
     }
-
-    const numChannels = Math.max(this.accumulatedChannels.length, newChannels.length)
-    const newTotal = this.totalSamplesDecoded + chunkLength
-
-    const nextChannels: Float32Array[] = []
-    for (let ch = 0; ch < numChannels; ch++) {
-      const prev = this.accumulatedChannels[ch % this.accumulatedChannels.length]
-      const next = newChannels[ch % newChannels.length]
-      const merged = new Float32Array(newTotal)
-      merged.set(prev, 0)
-      merged.set(next, this.totalSamplesDecoded)
-      nextChannels.push(merged)
-    }
-
-    this.accumulatedChannels = nextChannels
-    this.totalSamplesDecoded = newTotal
   }
 
   public abort(): void {
@@ -444,7 +520,7 @@ export class StreamingDecoderSession {
 
   public destroy(): void {
     this.abort()
-    this.accumulatedChannels = []
+    this.recentBlocks = []
     this.totalSamplesDecoded = 0
     this.isDone = true
   }

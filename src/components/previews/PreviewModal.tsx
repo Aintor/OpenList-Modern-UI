@@ -24,7 +24,7 @@ import '@videojs/react/audio/skin.css'
 import { VideoPlayer, VideoSkin, Video as VideoElement } from '@videojs/react/video'
 import { AudioPlayer, AudioSkin, Audio as AudioElement } from '@videojs/react/audio'
 import { I18nProvider } from '@videojs/react/i18n'
-import { useAudioCover } from '~/utils/audioCover'
+import { useAudioCover } from '~/utils/audioMeta'
 
 interface PreviewModalProps {
   obj: Obj | null

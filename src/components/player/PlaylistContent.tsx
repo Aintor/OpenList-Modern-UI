@@ -30,7 +30,6 @@ export const PlaylistContent: React.FC<PlaylistContentProps> = ({
   const {
     playlist,
     currentIndex,
-    isPlaying,
     playTrack,
     removeTrack,
     moveTrack,
@@ -49,6 +48,7 @@ export const PlaylistContent: React.FC<PlaylistContentProps> = ({
   const handleGripPointerDown = (e: React.PointerEvent, startIndex: number) => {
     e.preventDefault()
     e.stopPropagation()
+    e.nativeEvent?.stopImmediatePropagation?.()
 
     const startY = e.clientY
     const currentEl = itemElementsRef.current[startIndex]
@@ -107,7 +107,13 @@ export const PlaylistContent: React.FC<PlaylistContentProps> = ({
   }
 
   return (
-    <div className={`flex flex-col select-none ${className}`}>
+    <div
+      data-no-drag
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      className={`flex flex-col select-none ${className}`}
+    >
       {/* Header */}
       {showHeader && (
         <div className="flex items-center justify-between border-b border-slate-200/80 px-3.5 py-2 bg-slate-50/80 dark:border-white/10 dark:bg-white/5 shrink-0">
@@ -149,7 +155,11 @@ export const PlaylistContent: React.FC<PlaylistContentProps> = ({
 
       {/* Playlist Items */}
       <div
-        className={`flex-1 overflow-y-auto overscroll-contain p-1.5 space-y-0.5 ${maxHeightClass}`}
+        data-no-drag
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        className={`flex-1 overflow-y-auto overscroll-contain touch-pan-y p-1.5 space-y-0.5 ${maxHeightClass}`}
       >
         {playlist.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-slate-500 space-y-1">
@@ -182,6 +192,7 @@ export const PlaylistContent: React.FC<PlaylistContentProps> = ({
             return (
               <div
                 key={`${track.path}/${track.obj.name}`}
+                data-no-drag
                 ref={(el) => {
                   itemElementsRef.current[idx] = el
                 }}
@@ -189,6 +200,13 @@ export const PlaylistContent: React.FC<PlaylistContentProps> = ({
                   transform: `translateY(${translateY}px)`,
                   transition: isDraggingThis ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)',
                   zIndex: isDraggingThis ? 30 : 1,
+                }}
+                onPointerDown={(e) => {
+                  // Only allow grip to handle sort drag, otherwise stop bubbling so player doesn't move
+                  e.stopPropagation()
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation()
                 }}
                 onClick={() => {
                   if (!dragState) {
@@ -205,26 +223,17 @@ export const PlaylistContent: React.FC<PlaylistContentProps> = ({
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <div
+                    data-no-drag
                     onPointerDown={(e) => handleGripPointerDown(e, idx)}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.nativeEvent?.stopImmediatePropagation?.()
+                    }}
                     className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-indigo-500 p-0.5 rounded transition-colors shrink-0 touch-none dark:text-slate-500 dark:hover:text-indigo-300"
                     title="按住上下滑动排序"
                   >
                     <GripVertical className="h-3.5 w-3.5" />
                   </div>
-
-                  {isCurrent && (
-                    <div className="flex items-end space-x-0.5 h-3.5 w-3 shrink-0 pb-0.5">
-                      {isPlaying ? (
-                        <>
-                          <span className="w-0.5 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s] h-full"></span>
-                          <span className="w-0.5 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s] h-2/3"></span>
-                          <span className="w-0.5 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce h-4/5"></span>
-                        </>
-                      ) : (
-                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 m-auto"></span>
-                      )}
-                    </div>
-                  )}
 
                   <span title={track.obj.name} className="truncate block min-w-0 flex-1">
                     {track.obj.name}

@@ -8,7 +8,7 @@ export interface MobilePlayerElements {
   controls: HTMLDivElement | null
   title: HTMLDivElement | null
   topTitle: HTMLDivElement | null
-  timeSubtitle: HTMLParagraphElement | null
+  timeSubtitle?: HTMLParagraphElement | null
   header: HTMLDivElement | null
   scrubber: HTMLDivElement | null
   sideControls: HTMLDivElement | null
@@ -36,7 +36,7 @@ export const MOBILE_CONSTANTS = {
     collapsedScale: 38 / 64,  // 0.59375
   },
   title: {
-    expandedScale: 1.2,
+    expandedScale: 1.0,
   },
 }
 
@@ -71,14 +71,12 @@ export function applyModeGeometryInstant(
       gsap.set(elements.title, {
         left: '54px',
         right: '128px',
-        top: '10px',
-        textAlign: 'center',
+        top: '9px',
         scale: 1.0,
         opacity: 1,
       })
     }
     if (elements.topTitle) gsap.set(elements.topTitle, { y: 8, opacity: 0, display: 'none' })
-    if (elements.timeSubtitle) gsap.set(elements.timeSubtitle, { opacity: 1 })
     if (elements.header) gsap.set(elements.header, { opacity: 0 })
     if (elements.scrubber) gsap.set(elements.scrubber, { opacity: 0 })
     if (elements.sideControls) gsap.set(elements.sideControls, { opacity: 0 })
@@ -109,18 +107,16 @@ export function applyModeGeometryInstant(
       })
     }
     if (elements.title) {
-      // 100% Native Full-Width Centered
+      // 100% Native Centered with 16px margins
       gsap.set(elements.title, {
-        left: '0px',
-        right: '0px',
-        top: '220px',
-        textAlign: 'center',
+        left: '16px',
+        right: '16px',
+        top: '218px',
         scale: tC.expandedScale,
         opacity: 1,
       })
     }
     if (elements.topTitle) gsap.set(elements.topTitle, { y: 8, opacity: 0, display: 'none' })
-    if (elements.timeSubtitle) gsap.set(elements.timeSubtitle, { opacity: 0 })
     if (elements.header) gsap.set(elements.header, { opacity: 1 })
     if (elements.scrubber) gsap.set(elements.scrubber, { opacity: 1 })
     if (elements.sideControls) gsap.set(elements.sideControls, { opacity: 1 })
@@ -239,21 +235,18 @@ export function interpolateModeProgress(
       gsap.set(elements.topTitle, { opacity: 0, display: 'none' })
     }
     if (elements.title) {
-      const left = 0 + (54 - 0) * p
-      const right = 0 + (128 - 0) * p
-      const top = 220 + (10 - 220) * p
-      const scale = 1.2 + (1.0 - 1.2) * p
+      const left = 16 + (54 - 16) * p
+      const right = 16 + (128 - 16) * p
+      const top = 218 + (9 - 218) * p
       gsap.set(elements.title, {
         left: `${left}px`,
         right: `${right}px`,
         top: `${top}px`,
-        scale,
+        scale: 1.0,
         opacity: 1,
       })
     }
   }
-
-  if (elements.timeSubtitle) gsap.set(elements.timeSubtitle, { opacity: Math.max(0, (p - 0.25) / 0.75) })
   if (elements.header) gsap.set(elements.header, { opacity: Math.max(0, 1 - p * 2.5) })
   if (elements.scrubber) gsap.set(elements.scrubber, { opacity: Math.max(0, 1 - p * 2.2) })
   if (elements.sideControls) gsap.set(elements.sideControls, { opacity: Math.max(0, 1 - p * 2.2) })
@@ -278,7 +271,6 @@ export function runModeTransition(
     elements.controls,
     elements.title,
     elements.topTitle,
-    elements.timeSubtitle,
     elements.header,
     elements.scrubber,
     elements.sideControls,
@@ -401,7 +393,6 @@ export function runModeTransition(
       gsap.set(elements.title, { left: '54px', right: '128px', top: '10px', scale: 1.0 })
       tl.to(elements.title, { opacity: 1, duration: 0.22, ease: 'power2.out' }, 0.16)
     }
-    if (elements.timeSubtitle) tl.to(elements.timeSubtitle, { opacity: 1, duration: 0.2 }, 0.18)
     if (elements.header) tl.to(elements.header, { opacity: 0, duration: 0.2 }, 0)
     if (elements.scrubber) tl.to(elements.scrubber, { opacity: 0, duration: 0.2 }, 0)
     if (elements.sideControls) tl.to(elements.sideControls, { opacity: 0, duration: 0.2 }, 0)
@@ -453,20 +444,16 @@ export function runModeTransition(
     tl.to(
       elements.title,
       {
-        left: isExpanding ? '0px' : '54px',
-        right: isExpanding ? '0px' : '128px',
-        top: isExpanding ? '220px' : '10px',
-        scale: isExpanding ? 1.2 : 1.0,
+        left: isExpanding ? '16px' : '54px',
+        right: isExpanding ? '16px' : '128px',
+        top: isExpanding ? '218px' : '9px',
+        scale: 1.0,
         opacity: 1,
         duration,
         ease,
       },
       0
     )
-  }
-
-  if (elements.timeSubtitle) {
-    tl.to(elements.timeSubtitle, { opacity: isExpanding ? 0 : 1, duration: 0.2 }, isExpanding ? 0 : 0.18)
   }
   if (elements.header) {
     tl.to(elements.header, { opacity: isExpanding ? 1 : 0, duration: 0.25 }, isExpanding ? 0.12 : 0)

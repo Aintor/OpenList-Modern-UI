@@ -25,6 +25,23 @@ interface AddOrEditStorageModalProps {
   onSuccess: () => void
 }
 
+const formatValueByType = (val: any, type?: Type) => {
+  if (type === Type.Bool) {
+    return val === true || val === 'true'
+  }
+  if (type === Type.Number) {
+    if (val === '' || val === undefined || val === null) return 0
+    const num = Number(val)
+    return isNaN(num) ? 0 : num
+  }
+  if (type === Type.Float) {
+    if (val === '' || val === undefined || val === null) return 0
+    const num = parseFloat(val)
+    return isNaN(num) ? 0 : num
+  }
+  return val === undefined || val === null ? '' : String(val)
+}
+
 export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
   storageId,
   isOpen,
@@ -72,8 +89,17 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
           setSelectedDriver(defaultDriver)
           setMountPath('/')
           setRemark('')
-          setCommonValues({})
-          setAdditionalValues({})
+          const info = resp.data[defaultDriver]
+          const newCommon: Record<string, any> = {}
+          info?.common?.forEach((item) => {
+            newCommon[item.name] = formatValueByType(item.default, item.type)
+          })
+          const newAdd: Record<string, any> = {}
+          info?.additional?.forEach((item) => {
+            newAdd[item.name] = formatValueByType(item.default, item.type)
+          })
+          setCommonValues(newCommon)
+          setAdditionalValues(newAdd)
         }
       }
       setLoading(false)
@@ -91,12 +117,12 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
 
     const newCommon: Record<string, any> = {}
     info.common.forEach((item) => {
-      newCommon[item.name] = item.default || (item.type === Type.Bool ? false : '')
+      newCommon[item.name] = formatValueByType(item.default, item.type)
     })
 
     const newAdd: Record<string, any> = {}
     info.additional.forEach((item) => {
-      newAdd[item.name] = item.default || (item.type === Type.Bool ? false : '')
+      newAdd[item.name] = formatValueByType(item.default, item.type)
     })
 
     setCommonValues(newCommon)
@@ -111,13 +137,31 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
     }
 
     setSubmitting(true)
+
+    const formattedCommon: Record<string, any> = {}
+    currentDriverInfo?.common?.forEach((item) => {
+      formattedCommon[item.name] = formatValueByType(
+        commonValues[item.name] ?? item.default,
+        item.type
+      )
+    })
+
+    const formattedAdditional: Record<string, any> = {}
+    currentDriverInfo?.additional?.forEach((item) => {
+      formattedAdditional[item.name] = formatValueByType(
+        additionalValues[item.name] ?? item.default,
+        item.type
+      )
+    })
+
     const payload: Partial<Storage> = {
       ...commonValues,
+      ...formattedCommon,
       id: storageId || undefined,
       driver: selectedDriver,
       mount_path: mountPath,
       remark: remark,
-      addition: JSON.stringify(additionalValues),
+      addition: JSON.stringify(formattedAdditional),
     }
 
     try {

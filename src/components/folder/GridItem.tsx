@@ -7,7 +7,7 @@ import { useDownload } from '~/hooks/useDownload'
 import { useObjStore } from '~/store/useObjStore'
 import { useT } from '~/lang'
 import { ThumbnailImage } from '~/components/ui/ThumbnailImage'
-import { useAudioCover, isAudioObject } from '~/utils/audioCover'
+import { useAudioCover, isAudioObject } from '~/utils/audioMeta'
 
 interface GridItemProps {
   obj: StoreObj

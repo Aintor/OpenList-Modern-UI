@@ -7,7 +7,7 @@ import { useDownload } from '~/hooks/useDownload'
 import { useObjStore } from '~/store/useObjStore'
 import { useSettingsStore } from '~/store/useSettingsStore'
 import { useT } from '~/lang'
-import { useAudioCover, isAudioObject } from '~/utils/audioCover'
+import { useAudioCover, isAudioObject } from '~/utils/audioMeta'
 
 interface ListItemProps {
   obj: StoreObj

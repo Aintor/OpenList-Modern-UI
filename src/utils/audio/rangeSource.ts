@@ -140,10 +140,10 @@ export class RangeSource {
         headers: { Range: `bytes=${start}-${end}` },
         signal,
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn(`[AudioRange] ⚠️ Range request failed (network/CORS):`, err)
       this.supportsRange = false
-      throw err
+      throw err instanceof Error ? err : new Error(String(err))
     }
 
     if (resp.status === 206) {
