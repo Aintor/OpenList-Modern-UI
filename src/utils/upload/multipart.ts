@@ -77,6 +77,10 @@ export const multipartUpload = async (
   }
 
   if (!initResp || initResp.code !== 200) {
+    if (!overwrite && (initResp?.message === 'file exists' || initResp?.code === 403)) {
+      onProgress?.({ progress: 100, loaded: file.size, speed: 0, status: 'success' })
+      return
+    }
     throw new Error(initResp?.message || 'Multipart init rejected')
   }
 

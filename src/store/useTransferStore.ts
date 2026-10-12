@@ -67,12 +67,32 @@ export interface TransferTask {
   // Download specific
   url?: string
   abortController?: AbortController
+  // Folder group specific
+  groupId?: string
+  groupName?: string
   // Package specific
   subFiles?: PackageSubFile[]
   phase?: 'hashing' | 'uploading' | 'backending' | 'scanning' | 'downloading' | 'packaging' | 'success' | 'error' | 'canceled' | 'paused'
   completedFilesCount?: number
   totalFilesCount?: number
   targets?: Obj[]
+}
+
+export function getTaskGroupId(t: TransferTask): string | undefined {
+  if (t.groupId) return t.groupId
+  if (t.type === 'upload' && t.relativePath && t.relativePath.includes('/')) {
+    const rootName = t.relativePath.split('/')[0]
+    return `grp_compat_${t.targetDir || ''}_${rootName}`
+  }
+  return undefined
+}
+
+export function getTaskGroupName(t: TransferTask): string | undefined {
+  if (t.groupName) return t.groupName
+  if (t.type === 'upload' && t.relativePath && t.relativePath.includes('/')) {
+    return t.relativePath.split('/')[0]
+  }
+  return undefined
 }
 
 interface TransferState {
@@ -94,6 +114,9 @@ interface TransferState {
   resumeTask: (id: string) => void
   pauseAll: () => void
   resumeAll: () => void
+  pauseGroup: (groupId: string) => void
+  resumeGroup: (groupId: string) => void
+  removeGroup: (groupId: string) => void
   cancelTask: (id: string) => void
   removeTask: (id: string) => void
   retryTask: (id: string) => void
@@ -108,6 +131,9 @@ interface TransferState {
   setDownloadChunkThreads: (threads: number) => void
   setTryRapidUpload: (enabled: boolean) => void
   setOverwritePolicy: (policy: 'overwrite' | 'skip') => void
+  rebindFiles: (files: File[]) => { matched: number; total: number }
+  rebindTaskFile: (taskId: string, file: File) => boolean
+  rebindGroupFiles: (groupId: string, files: File[]) => { matched: number; total: number }
 
   // Backward compatibility alias
   addFiles: (files: File[], targetDir: string, password?: string) => void
@@ -150,10 +176,27 @@ export const useTransferStore = create<TransferState>()(
         if (!files.length) return
 
         const normalizedDir = targetDir.endsWith('/') ? targetDir : targetDir + '/'
+        const folderGroupMap = new Map<string, string>()
+
         const newTasks: TransferTask[] = files.map((file) => {
           const id = `up-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
           const relPath = getFileRelativePath(file)
           const targetPath = normalizedDir === '/' ? `/${relPath}` : `${normalizedDir}${relPath}`
+
+          let groupId: string | undefined
+          let groupName: string | undefined
+
+          if (relPath && relPath.includes('/')) {
+            const rootFolderName = relPath.split('/')[0]
+            groupName = rootFolderName
+            if (!folderGroupMap.has(rootFolderName)) {
+              folderGroupMap.set(
+                rootFolderName,
+                `grp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+              )
+            }
+            groupId = folderGroupMap.get(rootFolderName)
+          }
 
           return {
             id,
@@ -171,6 +214,8 @@ export const useTransferStore = create<TransferState>()(
             loaded: 0,
             speed: 0,
             createdAt: Date.now(),
+            groupId,
+            groupName,
           }
         })
 
@@ -324,6 +369,21 @@ export const useTransferStore = create<TransferState>()(
         pausedTasks.forEach((t) => get().resumeTask(t.id))
       },
 
+      pauseGroup: (groupId: string) => {
+        const groupTasks = get().tasks.filter((t) => getTaskGroupId(t) === groupId)
+        groupTasks.forEach((t) => get().pauseTask(t.id))
+      },
+
+      resumeGroup: (groupId: string) => {
+        const groupTasks = get().tasks.filter((t) => getTaskGroupId(t) === groupId)
+        groupTasks.forEach((t) => get().resumeTask(t.id))
+      },
+
+      removeGroup: (groupId: string) => {
+        const groupTasks = get().tasks.filter((t) => getTaskGroupId(t) === groupId)
+        groupTasks.forEach((t) => get().removeTask(t.id))
+      },
+
       retryTask: (id) => {
         get().resumeTask(id)
       },
@@ -381,6 +441,189 @@ export const useTransferStore = create<TransferState>()(
       setOpen: (isOpen) => set({ isOpen }),
       toggleMinimized: () => set((state) => ({ isMinimized: !state.isMinimized })),
       setMinimized: (isMinimized) => set({ isMinimized }),
+
+      rebindFiles: (files: File[]) => {
+        if (!files.length) return { matched: 0, total: 0 }
+
+        const currentTasks = get().tasks
+        const targetTasks = currentTasks.filter(
+          (t) => t.type === 'upload' && !t.file && t.status !== 'success'
+        )
+        if (!targetTasks.length) return { matched: 0, total: 0 }
+
+        const byRelPath = new Map<string, File>()
+        const byNameSize = new Map<string, File>()
+        const byName = new Map<string, File>()
+
+        files.forEach((file) => {
+          const rel = getFileRelativePath(file)
+          if (rel) {
+            byRelPath.set(rel, file)
+            const parts = rel.split('/')
+            if (parts.length > 1) {
+              byRelPath.set(parts.slice(1).join('/'), file)
+            }
+          }
+          byNameSize.set(`${file.name}_${file.size}`, file)
+          byName.set(file.name, file)
+        })
+
+        let matchedCount = 0
+        const updatedTasks = currentTasks.map((t) => {
+          if (t.type !== 'upload' || t.file || t.status === 'success') {
+            return t
+          }
+
+          let matchedFile: File | undefined
+
+          if (t.relativePath) {
+            matchedFile = byRelPath.get(t.relativePath)
+            if (!matchedFile) {
+              const tParts = t.relativePath.split('/')
+              if (tParts.length > 1) {
+                matchedFile = byRelPath.get(tParts.slice(1).join('/'))
+              }
+            }
+          }
+
+          if (!matchedFile) {
+            matchedFile = byNameSize.get(`${t.name}_${t.size}`)
+          }
+
+          if (!matchedFile) {
+            const candidate = byName.get(t.name)
+            if (candidate && (!t.size || candidate.size === t.size)) {
+              matchedFile = candidate
+            }
+          }
+
+          if (matchedFile) {
+            matchedCount++
+            return {
+              ...t,
+              file: matchedFile,
+              status: 'pending' as TransferStatus,
+              phase: 'uploading' as const,
+              error: undefined,
+            }
+          }
+
+          return t
+        })
+
+        if (matchedCount > 0) {
+          set({ tasks: updatedTasks })
+          processUploadQueue()
+        }
+
+        return { matched: matchedCount, total: targetTasks.length }
+      },
+
+      rebindTaskFile: (taskId: string, file: File) => {
+        const task = get().tasks.find((t) => t.id === taskId)
+        if (!task || task.type !== 'upload') return false
+
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  file,
+                  status: 'pending' as TransferStatus,
+                  phase: 'uploading' as const,
+                  error: undefined,
+                }
+              : t
+          ),
+        }))
+
+        processUploadQueue()
+        return true
+      },
+
+      rebindGroupFiles: (groupId: string, files: File[]) => {
+        const currentTasks = get().tasks
+        const targetTasks = currentTasks.filter(
+          (t) =>
+            t.type === 'upload' &&
+            getTaskGroupId(t) === groupId &&
+            !t.file &&
+            t.status !== 'success'
+        )
+        if (!targetTasks.length) return { matched: 0, total: 0 }
+
+        const byRelPath = new Map<string, File>()
+        const byNameSize = new Map<string, File>()
+        const byName = new Map<string, File>()
+
+        files.forEach((file) => {
+          const rel = getFileRelativePath(file)
+          if (rel) {
+            byRelPath.set(rel, file)
+            const parts = rel.split('/')
+            if (parts.length > 1) {
+              byRelPath.set(parts.slice(1).join('/'), file)
+            }
+          }
+          byNameSize.set(`${file.name}_${file.size}`, file)
+          byName.set(file.name, file)
+        })
+
+        let matchedCount = 0
+        const updatedTasks = currentTasks.map((t) => {
+          if (
+            t.type !== 'upload' ||
+            getTaskGroupId(t) !== groupId ||
+            t.file ||
+            t.status === 'success'
+          ) {
+            return t
+          }
+
+          let matchedFile: File | undefined
+
+          if (t.relativePath) {
+            matchedFile = byRelPath.get(t.relativePath)
+            if (!matchedFile) {
+              const tParts = t.relativePath.split('/')
+              if (tParts.length > 1) {
+                matchedFile = byRelPath.get(tParts.slice(1).join('/'))
+              }
+            }
+          }
+
+          if (!matchedFile) {
+            matchedFile = byNameSize.get(`${t.name}_${t.size}`)
+          }
+
+          if (!matchedFile) {
+            const candidate = byName.get(t.name)
+            if (candidate && (!t.size || candidate.size === t.size)) {
+              matchedFile = candidate
+            }
+          }
+
+          if (matchedFile) {
+            matchedCount++
+            return {
+              ...t,
+              file: matchedFile,
+              status: 'pending' as TransferStatus,
+              phase: 'uploading' as const,
+              error: undefined,
+            }
+          }
+
+          return t
+        })
+
+        if (matchedCount > 0) {
+          set({ tasks: updatedTasks })
+          processUploadQueue()
+        }
+
+        return { matched: matchedCount, total: targetTasks.length }
+      },
 
       // Alias for backward compatibility
       addFiles: (files, targetDir, password) =>
@@ -977,7 +1220,7 @@ async function executeUploadTask(task: TransferTask) {
               status: 'error',
               phase: 'error',
               speed: 0,
-              error: '文件句柄已失效，请重新选择文件上传',
+              error: '文件句柄已失效，请重新关联文件',
             }
           : t
       ),
@@ -1083,6 +1326,29 @@ async function executeUploadTask(task: TransferTask) {
       objStore.fetchPath(objStore.currentPath, objStore.password, true, false, objStore.page, true)
     }
   } catch (err: any) {
+    const isFileExists =
+      err?.message === 'file exists' ||
+      err?.response?.data?.message === 'file exists' ||
+      err?.message?.includes('file exists')
+    if (isFileExists && useTransferStore.getState().overwritePolicy === 'skip') {
+      useTransferStore.setState((state) => ({
+        tasks: state.tasks.map((t) =>
+          t.id === task.id
+            ? {
+                ...t,
+                status: 'success',
+                phase: 'success',
+                progress: 100,
+                loaded: task.file?.size || t.size,
+                speed: 0,
+                error: undefined,
+              }
+            : t
+        ),
+      }))
+      return
+    }
+
     if (abortController.signal.aborted || err?.message === 'Upload canceled') {
       useTransferStore.setState((state) => ({
         tasks: state.tasks.map((t) =>

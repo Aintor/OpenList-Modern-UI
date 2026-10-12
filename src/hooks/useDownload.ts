@@ -66,27 +66,69 @@ export const useDownload = () => {
   }
 
   const batchDownload = async (objs: Obj[], customPath?: string) => {
-    const path = customPath !== undefined ? customPath : storePath
-    const files = objs.filter((o) => !o.is_dir)
-    if (files.length === 0) {
-      notify.warning(t('home.toolbar.batch_download_empty') || 'No files selected to download')
+    const basePath = customPath !== undefined ? customPath : storePath
+    if (!objs.length) return
+
+    const hasFolder = objs.some((o) => o.is_dir)
+    if (hasFolder) {
+      notify.info(t('home.package_download.fetching_struct') || '正在扫描文件夹中的文件...')
+    }
+
+    interface DownloadItem {
+      obj: Obj
+      folderPath: string
+      relativePath: string
+    }
+
+    const collected: DownloadItem[] = []
+
+    const traverse = async (subDir: string, targetObj: Obj): Promise<boolean> => {
+      const activeFolder = subDir ? `${basePath.replace(/\/$/, '')}/${subDir}` : basePath
+      if (!targetObj.is_dir) {
+        collected.push({
+          obj: targetObj,
+          folderPath: activeFolder,
+          relativePath: subDir ? `${subDir}/${targetObj.name}` : targetObj.name,
+        })
+        return true
+      } else {
+        const nextFolder = `${activeFolder.replace(/\/$/, '')}/${targetObj.name}`
+        const resp = await fsList(nextFolder, password)
+        if (resp.code !== 200) {
+          notify.error(resp.message || `Failed to read directory: ${targetObj.name}`)
+          return false
+        }
+        for (const child of resp.data?.content || []) {
+          const nextSub = subDir ? `${subDir}/${targetObj.name}` : targetObj.name
+          await traverse(nextSub, child)
+        }
+        return true
+      }
+    }
+
+    for (const obj of objs) {
+      await traverse('', obj)
+    }
+
+    if (collected.length === 0) {
+      notify.warning(t('home.toolbar.batch_download_empty') || '未选中可下载的文件')
       return
     }
 
     notify.info(
-      t('home.toolbar.batch_download_start', { count: files.length }) ||
-      `Batch downloading ${files.length} file(s)...`
+      t('home.toolbar.batch_download_start', { count: collected.length }) ||
+      `Batch downloading ${collected.length} file(s)...`
     )
 
     const taskItems: Array<{ name: string; size: number; url: string; targetPath?: string }> = []
     await Promise.all(
-      files.map(async (file) => {
-        const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`
-        const url = await resolveDownloadUrl(file, path)
+      collected.map(async (item) => {
+        const fullPath = item.folderPath === '/' ? `/${item.obj.name}` : `${item.folderPath}/${item.obj.name}`
+        const url = await resolveDownloadUrl(item.obj, item.folderPath)
         if (url) {
           taskItems.push({
-            name: file.name,
-            size: file.size || 0,
+            name: item.obj.name,
+            size: item.obj.size || 0,
             url,
             targetPath: fullPath,
           })

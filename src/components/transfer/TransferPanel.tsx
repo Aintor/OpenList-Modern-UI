@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import {
   ArrowDown,
   ArrowUp,
@@ -14,10 +14,19 @@ import {
   Play,
   Inbox,
   X,
+  FolderUp,
+  Upload,
+  AlertCircle,
 } from 'lucide-react'
-import { useTransferStore, TransferTask } from '~/store/useTransferStore'
+import {
+  useTransferStore,
+  TransferTask,
+  getTaskGroupId,
+  getTaskGroupName,
+} from '~/store/useTransferStore'
 import { getFileSize } from '~/utils/str'
 import { useT } from '~/lang'
+import { notify } from '~/utils/notify'
 
 export interface TransferPanelProps {
   onClose?: () => void
@@ -34,15 +43,61 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
     resumeTask,
     removeTask,
     retryTask,
+    pauseGroup,
+    resumeGroup,
+    removeGroup,
     clearCompleted,
+    overwritePolicy,
+    setOverwritePolicy,
+    rebindFiles,
   } = useTransferStore()
 
+  const rebindFolderInputRef = useRef<HTMLInputElement>(null)
+  const rebindFileInputRef = useRef<HTMLInputElement>(null)
+
+  const rebindableTasks = tasks.filter(
+    (t) => t.type === 'upload' && !t.file && t.status !== 'success'
+  )
+  const hasExpiredHandles = rebindableTasks.length > 0
+
+  const handleFolderRebind = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return
+    const files = Array.from(e.target.files)
+    const { matched, total } = rebindFiles(files)
+    if (matched > 0) {
+      notify.success(`已成功重新关联 ${matched} 个文件，恢复断点续传！`)
+    } else {
+      notify.warning(`未在选中的文件夹中匹配到对应的 ${total} 个文件`)
+    }
+    e.target.value = ''
+  }
+
+  const handleFilesRebind = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return
+    const files = Array.from(e.target.files)
+    const { matched, total } = rebindFiles(files)
+    if (matched > 0) {
+      notify.success(`已成功重新关联 ${matched} 个文件，恢复断点续传！`)
+    } else {
+      notify.warning(`未匹配到对应的 ${total} 个文件`)
+    }
+    e.target.value = ''
+  }
+
   const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({})
+  const [expandedFolderGroups, setExpandedFolderGroups] = useState<Record<string, boolean>>({})
 
   const togglePackageExpand = (id: string) => {
     setExpandedPackages((prev) => ({
       ...prev,
       [id]: prev[id] === undefined ? false : !prev[id],
+    }))
+  }
+
+  const toggleFolderGroupExpand = (groupId: string) => {
+    setExpandedFolderGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
     }))
   }
 
@@ -93,6 +148,39 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
   const completedTasks = tasks.filter((t) => t.status === 'success')
   const isAllDone = tasks.length > 0 && activeCount === 0 && tasks.every((t) => t.status === 'success' || t.status === 'canceled')
 
+  // Group tasks for rendering
+  const seenFolderGroups = new Set<string>()
+  const renderItems: Array<
+    | { kind: 'package'; task: TransferTask }
+    | { kind: 'folderGroup'; groupId: string; groupName: string; tasks: TransferTask[] }
+    | { kind: 'single'; task: TransferTask }
+  > = []
+
+  tasks.forEach((task) => {
+    if (task.type === 'package') {
+      renderItems.push({ kind: 'package', task })
+      return
+    }
+
+    const groupId = getTaskGroupId(task)
+    if (groupId) {
+      if (!seenFolderGroups.has(groupId)) {
+        seenFolderGroups.add(groupId)
+        const groupTasks = tasks.filter((t) => getTaskGroupId(t) === groupId)
+        const groupName = getTaskGroupName(groupTasks[0]) || '文件夹上传'
+        renderItems.push({
+          kind: 'folderGroup',
+          groupId,
+          groupName,
+          tasks: groupTasks,
+        })
+      }
+      return
+    }
+
+    renderItems.push({ kind: 'single', task })
+  })
+
   return (
     <div className="flex flex-col select-none">
       {/* Panel Header */}
@@ -133,6 +221,52 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
         </div>
       </div>
 
+      {/* Expired File Handles Rebind Alert Banner */}
+      {hasExpiredHandles && (
+        <div className="mb-2.5 rounded-xl border border-amber-200/90 bg-amber-50/80 p-2.5 dark:border-amber-900/60 dark:bg-amber-950/40 text-xs">
+          <div className="flex items-center space-x-1.5 text-amber-800 dark:text-amber-200 font-semibold">
+            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>检测到 {rebindableTasks.length} 个上传任务句柄已失效</span>
+          </div>
+          <p className="mt-1 text-[11px] text-amber-700/90 dark:text-amber-300/80 leading-relaxed">
+            页面刷新后浏览器释放了本地文件访问。只需选中原文件夹，即可自动重新关联并继续断点续传（不会重传已完成部分）。
+          </p>
+          <div className="mt-2 flex items-center space-x-2">
+            <button
+              onClick={() => rebindFolderInputRef.current?.click()}
+              className="flex items-center space-x-1 rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-xs hover:bg-amber-700 transition-colors cursor-pointer"
+            >
+              <FolderUp className="h-3 w-3" />
+              <span>重新关联本地文件夹</span>
+            </button>
+            <button
+              onClick={() => rebindFileInputRef.current?.click()}
+              className="flex items-center space-x-1 rounded-lg border border-amber-300 bg-white/80 px-2 py-1 text-[11px] font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-900/50 dark:text-amber-200 hover:bg-white transition-colors cursor-pointer"
+            >
+              <Upload className="h-3 w-3" />
+              <span>选择文件</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden Rebind File Pickers */}
+      <input
+        ref={rebindFolderInputRef}
+        type="file"
+        multiple
+        {...({ webkitdirectory: '', directory: '' } as any)}
+        className="hidden"
+        onChange={handleFolderRebind}
+      />
+      <input
+        ref={rebindFileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFilesRebind}
+      />
+
       {/* Task List / Empty State */}
       {tasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-slate-400 space-y-1.5">
@@ -141,30 +275,50 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
         </div>
       ) : (
         <div className={`overflow-y-auto space-y-2.5 pr-0.5 ${isMobile ? 'max-h-[50vh]' : 'max-h-[340px]'}`}>
-          {tasks.map((task) => {
-            if (task.type === 'package') {
+          {renderItems.map((item) => {
+            if (item.kind === 'package') {
               return (
                 <PackageTaskItem
-                  key={task.id}
-                  task={task}
-                  isExpanded={expandedPackages[task.id] !== false}
-                  onToggleExpand={() => togglePackageExpand(task.id)}
-                  onPause={() => pauseTask(task.id)}
-                  onResume={() => resumeTask(task.id)}
-                  onRemove={() => removeTask(task.id)}
-                  onRetry={() => retryTask(task.id)}
+                  key={item.task.id}
+                  task={item.task}
+                  isExpanded={expandedPackages[item.task.id] !== false}
+                  onToggleExpand={() => togglePackageExpand(item.task.id)}
+                  onPause={() => pauseTask(item.task.id)}
+                  onResume={() => resumeTask(item.task.id)}
+                  onRemove={() => removeTask(item.task.id)}
+                  onRetry={() => retryTask(item.task.id)}
+                />
+              )
+            }
+
+            if (item.kind === 'folderGroup') {
+              return (
+                <FolderGroupTaskItem
+                  key={item.groupId}
+                  groupId={item.groupId}
+                  groupName={item.groupName}
+                  tasks={item.tasks}
+                  isExpanded={!!expandedFolderGroups[item.groupId]}
+                  onToggleExpand={() => toggleFolderGroupExpand(item.groupId)}
+                  onPauseGroup={() => pauseGroup(item.groupId)}
+                  onResumeGroup={() => resumeGroup(item.groupId)}
+                  onRemoveGroup={() => removeGroup(item.groupId)}
+                  onPauseTask={(id) => pauseTask(id)}
+                  onResumeTask={(id) => resumeTask(id)}
+                  onRemoveTask={(id) => removeTask(id)}
+                  onRetryTask={(id) => retryTask(id)}
                 />
               )
             }
 
             return (
               <StandardTaskItem
-                key={task.id}
-                task={task}
-                onPause={() => pauseTask(task.id)}
-                onResume={() => resumeTask(task.id)}
-                onRemove={() => removeTask(task.id)}
-                onRetry={() => retryTask(task.id)}
+                key={item.task.id}
+                task={item.task}
+                onPause={() => pauseTask(item.task.id)}
+                onResume={() => resumeTask(item.task.id)}
+                onRemove={() => removeTask(item.task.id)}
+                onRetry={() => retryTask(item.task.id)}
               />
             )
           })}
@@ -174,11 +328,23 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
       {/* Footer Controls */}
       {tasks.length > 0 && (
         <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800/80 text-[11px]">
-          <span className="text-slate-400">
-            {isAllDone
-              ? (t('home.transfer.completed') || '已完成')
-              : `${activeCount} ${t('home.transfer.title') || '进行中'}`}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="text-slate-400">
+              {isAllDone
+                ? (t('home.transfer.completed') || '已完成')
+                : `${activeCount} ${t('home.transfer.title') || '进行中'}`}
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">·</span>
+            <button
+              onClick={() =>
+                setOverwritePolicy(overwritePolicy === 'skip' ? 'overwrite' : 'skip')
+              }
+              title={overwritePolicy === 'skip' ? '当前策略：跳过已存在文件（点击切换）' : '当前策略：覆盖已存在文件（点击切换）'}
+              className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors cursor-pointer font-medium"
+            >
+              {overwritePolicy === 'skip' ? '跳过同名' : '覆盖同名'}
+            </button>
+          </div>
 
           {completedTasks.length > 0 && (
             <button
@@ -206,6 +372,8 @@ const StandardTaskItem: React.FC<{
   onRetry: () => void
 }> = ({ task, onPause, onResume, onRemove, onRetry }) => {
   const t = useT()
+  const singleFileInputRef = useRef<HTMLInputElement>(null)
+  const isUploadMissingFile = task.type === 'upload' && !task.file && task.status !== 'success'
 
   return (
     <div className="flex flex-col space-y-1.5 rounded-xl p-1.5 transition-colors bg-slate-50/60 dark:bg-slate-800/40">
@@ -333,7 +501,11 @@ const StandardTaskItem: React.FC<{
             </span>
           )}
 
-          {task.status === 'error' && (
+          {isUploadMissingFile ? (
+            <span className="text-amber-600 dark:text-amber-400 font-semibold truncate max-w-[180px]">
+              句柄已失效，请重新关联
+            </span>
+          ) : task.status === 'error' && (
             <span className="text-rose-500 font-semibold truncate max-w-[180px]">
               {task.error || (t('home.transfer.error') || '失败')}
             </span>
@@ -375,7 +547,29 @@ const StandardTaskItem: React.FC<{
               </button>
             )}
 
-            {(task.status === 'error' || task.status === 'canceled') && (
+            {isUploadMissingFile ? (
+              <>
+                <button
+                  onClick={() => singleFileInputRef.current?.click()}
+                  title="重新选择该文件继续上传"
+                  className="rounded p-0.5 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/60 transition-colors cursor-pointer"
+                >
+                  <FolderUp className="h-3 w-3" />
+                </button>
+                <input
+                  ref={singleFileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      useTransferStore.getState().rebindTaskFile(task.id, e.target.files[0])
+                      notify.success(`已重新关联文件：${e.target.files[0].name}`)
+                    }
+                    e.target.value = ''
+                  }}
+                />
+              </>
+            ) : (task.status === 'error' || task.status === 'canceled') && (
               <button
                 onClick={onRetry}
                 title={t('home.transfer.retry') || '重试'}
@@ -647,6 +841,386 @@ const PackageTaskItem: React.FC<{
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Grouped Folder Upload Task with Sticky Header & Sub-Files Details
+ */
+const FolderGroupTaskItem: React.FC<{
+  groupId: string
+  groupName: string
+  tasks: TransferTask[]
+  isExpanded: boolean
+  onToggleExpand: () => void
+  onPauseGroup: () => void
+  onResumeGroup: () => void
+  onRemoveGroup: () => void
+  onPauseTask: (id: string) => void
+  onResumeTask: (id: string) => void
+  onRemoveTask: (id: string) => void
+  onRetryTask: (id: string) => void
+}> = ({
+  groupId,
+  groupName,
+  tasks,
+  isExpanded,
+  onToggleExpand,
+  onPauseGroup,
+  onResumeGroup,
+  onRemoveGroup,
+  onPauseTask,
+  onResumeTask,
+  onRemoveTask,
+  onRetryTask,
+}) => {
+  const t = useT()
+  const groupFolderInputRef = useRef<HTMLInputElement>(null)
+  const singleFileInputRef = useRef<HTMLInputElement>(null)
+  const [activeSingleTaskId, setActiveSingleTaskId] = useState<string | null>(null)
+
+  const { rebindGroupFiles, rebindTaskFile } = useTransferStore()
+
+  const completedCount = tasks.filter((t) => t.status === 'success').length
+  const totalCount = tasks.length
+  const isAllSuccess = completedCount === totalCount && totalCount > 0
+
+  const activeTasks = tasks.filter(
+    (t) =>
+      t.status === 'uploading' ||
+      t.status === 'hashing' ||
+      t.status === 'backending'
+  )
+  const isUploading = activeTasks.length > 0
+  const isPaused =
+    !isUploading &&
+    !isAllSuccess &&
+    tasks.some((t) => t.status === 'paused') &&
+    tasks.every((t) => t.status === 'paused' || t.status === 'success' || t.status === 'canceled')
+
+  const hasError = !isUploading && tasks.some((t) => t.status === 'error')
+  const missingFiles = tasks.filter((t) => !t.file && t.status !== 'success')
+  const hasMissingHandles = missingFiles.length > 0
+
+  const totalBytes = tasks.reduce((sum, t) => sum + (t.file?.size || t.size || 0), 0)
+  const loadedBytes = tasks.reduce((sum, t) => {
+    if (t.status === 'success') return sum + (t.file?.size || t.size || 0)
+    return sum + (t.loaded || 0)
+  }, 0)
+  const groupProgress =
+    totalBytes > 0
+      ? Math.min(100, Math.round((loadedBytes / totalBytes) * 100))
+      : isAllSuccess
+      ? 100
+      : 0
+  const groupSpeed = activeTasks.reduce((sum, t) => sum + (t.speed || 0), 0)
+
+  const handleFolderRebind = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return
+    const files = Array.from(e.target.files)
+    const { matched, total } = rebindGroupFiles(groupId, files)
+    if (matched > 0) {
+      notify.success(`已为文件夹「${groupName}」关联 ${matched}/${total} 个文件，恢复断点续传！`)
+    } else {
+      notify.warning(`未在该文件夹中匹配到待上传文件`)
+    }
+    e.target.value = ''
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/50 dark:border-slate-800/80 dark:bg-slate-900/50">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 py-2 border-b border-slate-100 dark:border-slate-800/80 shadow-xs">
+        {/* Row 1: Folder icon, folder name, file counter, total size & chevron */}
+        <div className="flex items-center justify-between space-x-1.5">
+          <div
+            onClick={onToggleExpand}
+            className="flex items-center space-x-1.5 truncate flex-1 min-w-0 cursor-pointer select-none"
+          >
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+              <FolderUp className="h-2.5 w-2.5 stroke-[2.5]" />
+            </span>
+            <span
+              className="truncate text-xs font-bold text-slate-900 dark:text-slate-100"
+              title={groupName}
+            >
+              {groupName}
+            </span>
+            {totalCount > 0 && (
+              <span className="rounded-full bg-slate-200/60 px-1.5 py-0.2 font-mono tabular-nums text-[9px] text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-semibold">
+                {completedCount}/{totalCount}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-1.5 shrink-0">
+            <span className="font-mono tabular-nums text-[10px] text-slate-400">
+              {getFileSize(totalBytes)}
+            </span>
+            <button
+              onClick={onToggleExpand}
+              className="rounded p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Slim Progress Bar */}
+        <div className="my-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-200/60 dark:bg-slate-800">
+          <div
+            className={`h-full transition-all duration-200 ${
+              isAllSuccess
+                ? 'bg-emerald-500'
+                : hasError
+                ? 'bg-rose-500'
+                : isPaused
+                ? 'bg-amber-500'
+                : hasMissingHandles
+                ? 'bg-amber-500'
+                : 'bg-indigo-600 dark:bg-indigo-500'
+            }`}
+            style={{ width: `${groupProgress}%` }}
+          />
+        </div>
+
+        {/* Row 3: Status / Speed / Actions */}
+        <div className="flex items-center justify-between text-[10px]">
+          <div className="flex items-center space-x-1.5 text-slate-500 dark:text-slate-400 truncate flex-1 min-w-0 pr-2">
+            {isAllSuccess ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center space-x-1">
+                <Check className="h-2.5 w-2.5" />
+                <span>{t('home.transfer.completed') || '文件夹上传完成'}</span>
+              </span>
+            ) : hasMissingHandles ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  groupFolderInputRef.current?.click()
+                }}
+                className="flex items-center space-x-1 rounded bg-amber-100 hover:bg-amber-200/90 dark:bg-amber-950/70 dark:hover:bg-amber-900/80 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 font-medium transition-colors cursor-pointer"
+                title="页面刷新后文件句柄已释放，点击选择该文件夹即可恢复上传"
+              >
+                <FolderUp className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>关联该文件夹 ({missingFiles.length} 个待关联)</span>
+              </button>
+            ) : isPaused ? (
+              <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                {t('home.transfer.paused') || '已暂停'} ({completedCount}/{totalCount})
+              </span>
+            ) : hasError ? (
+              <span className="text-rose-500 font-semibold truncate">
+                部分文件上传失败
+              </span>
+            ) : isUploading ? (
+              <>
+                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                  {t('home.transfer.uploading') || '上传中'} ({completedCount}/{totalCount})
+                </span>
+                {groupSpeed > 0 && (
+                  <span className="font-mono tabular-nums text-slate-400">
+                    {getFileSize(groupSpeed)}/s
+                  </span>
+                )}
+              </>
+            ) : (
+              <span>{t('home.upload.pending') || '排队中...'}</span>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2 font-mono tabular-nums text-slate-400 shrink-0">
+            <span className="w-8 text-right font-medium">{groupProgress}%</span>
+
+            <div className="flex items-center space-x-1">
+              {isUploading && (
+                <button
+                  onClick={onPauseGroup}
+                  title={t('home.transfer.pause') || '暂停整组上传'}
+                  className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  <Pause className="h-3 w-3" />
+                </button>
+              )}
+
+              {isPaused && (
+                <button
+                  onClick={onResumeGroup}
+                  title={t('home.transfer.resume') || '继续整组上传'}
+                  className="rounded p-0.5 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer"
+                >
+                  <Play className="h-3 w-3" />
+                </button>
+              )}
+
+              {hasError && (
+                <button
+                  onClick={onResumeGroup}
+                  title={t('home.transfer.retry') || '重试整组失败任务'}
+                  className="rounded p-0.5 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </button>
+              )}
+
+              <button
+                onClick={onRemoveGroup}
+                title={t('home.transfer.delete') || '删除整组任务'}
+                className="rounded p-0.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/60 dark:hover:text-rose-400 transition-colors cursor-pointer"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hidden Folder Input for Group Rebind */}
+      <input
+        ref={groupFolderInputRef}
+        type="file"
+        multiple
+        {...({ webkitdirectory: '', directory: '' } as any)}
+        className="hidden"
+        onChange={handleFolderRebind}
+      />
+
+      {/* Hidden File Input for Single File Rebind */}
+      <input
+        ref={singleFileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.[0] && activeSingleTaskId) {
+            rebindTaskFile(activeSingleTaskId, e.target.files[0])
+            notify.success(`已重新关联文件：${e.target.files[0].name}`)
+          }
+          setActiveSingleTaskId(null)
+          e.target.value = ''
+        }}
+      />
+
+      {/* Sub-Files List (Scrollable inside the card) */}
+      {isExpanded && tasks.length > 0 && (
+        <div className="max-h-48 overflow-y-auto px-2.5 py-1.5 space-y-1 divide-y divide-slate-100 dark:divide-slate-800/40">
+          {tasks.map((task) => {
+            const isSubSuccess = task.status === 'success'
+            const isSubUploading =
+              task.status === 'uploading' ||
+              task.status === 'hashing' ||
+              task.status === 'backending'
+            const isSubMissing = !task.file && !isSubSuccess
+
+            return (
+              <div
+                key={task.id}
+                className="flex items-center justify-between pt-1 text-[10px] text-slate-600 dark:text-slate-300"
+              >
+                <div className="flex items-center space-x-1.5 truncate flex-1 min-w-0 pr-2">
+                  {isSubSuccess ? (
+                    <Check className="h-2.5 w-2.5 text-emerald-500 shrink-0" />
+                  ) : isSubUploading ? (
+                    <Loader2 className="h-2.5 w-2.5 text-indigo-600 dark:text-indigo-400 animate-spin shrink-0" />
+                  ) : task.status === 'paused' ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 ml-0.5 mr-0.5" />
+                  ) : isSubMissing ? (
+                    <AlertCircle className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                  ) : task.status === 'error' ? (
+                    <X className="h-2.5 w-2.5 text-rose-500 shrink-0" />
+                  ) : (
+                    <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0 ml-0.5 mr-1" />
+                  )}
+
+                  <span
+                    className={`truncate ${
+                      isSubUploading ? 'font-semibold text-slate-800 dark:text-slate-100' : ''
+                    }`}
+                    title={task.relativePath || task.name}
+                  >
+                    {task.relativePath || task.name}
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-1.5 shrink-0 font-mono tabular-nums text-[9px] text-slate-400">
+                  <span>{getFileSize(task.size)}</span>
+
+                  {isSubUploading && (
+                    <span className="w-7 text-right font-semibold text-indigo-600 dark:text-indigo-400">
+                      {task.progress}%
+                    </span>
+                  )}
+
+                  {isSubSuccess && (
+                    <span className="w-7 text-right text-emerald-600 dark:text-emerald-400 font-medium">
+                      已完成
+                    </span>
+                  )}
+
+                  {task.status === 'paused' && (
+                    <span className="w-7 text-right text-amber-500 font-medium">
+                      已暂停
+                    </span>
+                  )}
+
+                  {isSubMissing && !isSubSuccess && (
+                    <button
+                      onClick={() => {
+                        setActiveSingleTaskId(task.id)
+                        singleFileInputRef.current?.click()
+                      }}
+                      className="text-amber-600 dark:text-amber-400 hover:underline cursor-pointer font-medium"
+                      title="单独选择该文件"
+                    >
+                      重新选择
+                    </button>
+                  )}
+
+                  <div className="flex items-center space-x-0.5 pl-1">
+                    {isSubUploading && (
+                      <button
+                        onClick={() => onPauseTask(task.id)}
+                        title="暂停"
+                        className="rounded p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      >
+                        <Pause className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                    {task.status === 'paused' && (
+                      <button
+                        onClick={() => onResumeTask(task.id)}
+                        title="继续"
+                        className="rounded p-0.5 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 cursor-pointer"
+                      >
+                        <Play className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                    {(task.status === 'error' || task.status === 'canceled') && (
+                      <button
+                        onClick={() => onRetryTask(task.id)}
+                        title="重试"
+                        className="rounded p-0.5 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 cursor-pointer"
+                      >
+                        <RotateCcw className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onRemoveTask(task.id)}
+                      title="删除"
+                      className="rounded p-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                    >
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

@@ -38,37 +38,47 @@ export const formUpload = async (
 
   onProgress?.({ status: 'uploading', engine: 'form', progress: 0, loaded: 0, speed: 0 })
 
-  const resp: any = await r.put('/fs/form', form, {
-    headers,
-    signal,
-    onUploadProgress: (progressEvent) => {
-      if (progressEvent.total) {
-        const percent = Math.min(99, Math.round((progressEvent.loaded / progressEvent.total) * 100))
-        const now = Date.now()
-        const duration = (now - lastTime) / 1000
+  try {
+    const resp: any = await r.put('/fs/form', form, {
+      headers,
+      signal,
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percent = Math.min(99, Math.round((progressEvent.loaded / progressEvent.total) * 100))
+          const now = Date.now()
+          const duration = (now - lastTime) / 1000
 
-        let currentSpeed = 0
-        if (duration >= 0.5) {
-          const loadedDelta = progressEvent.loaded - lastLoaded
-          currentSpeed = Math.max(0, loadedDelta / duration)
-          lastTime = now
-          lastLoaded = progressEvent.loaded
+          let currentSpeed = 0
+          if (duration >= 0.5) {
+            const loadedDelta = progressEvent.loaded - lastLoaded
+            currentSpeed = Math.max(0, loadedDelta / duration)
+            lastTime = now
+            lastLoaded = progressEvent.loaded
+          }
+
+          const isBackending = progressEvent.loaded >= progressEvent.total
+          onProgress?.({
+            progress: percent,
+            loaded: progressEvent.loaded,
+            speed: currentSpeed > 0 ? currentSpeed : undefined,
+            status: isBackending ? 'backending' : 'uploading',
+          })
         }
+      },
+    })
 
-        const isBackending = progressEvent.loaded >= progressEvent.total
-        onProgress?.({
-          progress: percent,
-          loaded: progressEvent.loaded,
-          speed: currentSpeed > 0 ? currentSpeed : undefined,
-          status: isBackending ? 'backending' : 'uploading',
-        })
-      }
-    },
-  })
-
-  if (resp && resp.code === 200) {
-    onProgress?.({ progress: 100, loaded: file.size, speed: 0, status: 'success' })
-  } else {
-    throw new Error(resp?.message || 'Form upload failed')
+    if (resp && resp.code === 200) {
+      onProgress?.({ progress: 100, loaded: file.size, speed: 0, status: 'success' })
+    } else if (!overwrite && (resp?.message === 'file exists' || resp?.code === 403)) {
+      onProgress?.({ progress: 100, loaded: file.size, speed: 0, status: 'success' })
+    } else {
+      throw new Error(resp?.message || 'Form upload failed')
+    }
+  } catch (err: any) {
+    if (!overwrite && (err?.response?.data?.message === 'file exists' || err?.message?.includes('file exists') || err?.response?.status === 403)) {
+      onProgress?.({ progress: 100, loaded: file.size, speed: 0, status: 'success' })
+      return
+    }
+    throw err
   }
 }
