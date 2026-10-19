@@ -89,16 +89,9 @@ export const directUpload = async (options: UploadOptions): Promise<void> => {
   } catch (err: any) {
     if (signal?.aborted) throw err
 
-    // If direct upload to source station was slow or failed, and an ESA/accelerated fallback URL exists:
-    if (
-      fallbackURL &&
-      (err instanceof DirectUploadSlowError ||
-        err?.name === 'DirectUploadSlowError' ||
-        err?.message?.includes('network') ||
-        err?.message?.includes('timeout') ||
-        err?.message?.includes('CORS'))
-    ) {
-      console.info(`[DirectUpload] ${err.message}. Seamlessly switching to ESA edge upload`)
+    // If direct upload to source station was slow or failed for any reason, and an ESA/accelerated fallback URL exists:
+    if (fallbackURL) {
+      console.info(`[DirectUpload] Source direct upload encountered issue (${err.message}). Seamlessly switching to ESA edge upload`)
       onProgress?.({
         status: 'uploading',
         engine: 'direct',

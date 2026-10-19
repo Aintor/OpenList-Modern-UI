@@ -42,16 +42,13 @@ export const dispatchUpload = async (options: UploadOptions): Promise<void> => {
 
   if (signal?.aborted) throw new Error('Upload canceled')
 
-  // 2. Direct-First (HttpDirect)
+  // 2. Direct Upload (HttpDirect)
   const isDirectSupported = directUploadTools?.includes('HttpDirect')
   if (isDirectSupported) {
-    try {
-      await directUpload(options)
-      return
-    } catch (err: any) {
-      if (signal?.aborted) throw err
-      console.warn('Direct upload failed or slow, silently falling back to backend pipeline:', err.message)
-    }
+    // When direct upload is enabled, file transfers must strictly stay client-to-storage/edge.
+    // Zero server relay: NEVER fall back to /api/fs/put or /api/fs/multipart.
+    await directUpload(options)
+    return
   }
 
   if (signal?.aborted) throw new Error('Upload canceled')
