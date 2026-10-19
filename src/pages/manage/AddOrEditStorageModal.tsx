@@ -293,7 +293,7 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
                 {storageId ? (t('global.edit') || 'Edit Storage') : (t('global.add') || 'Add Storage')}
               </h3>
               <p className="text-[11px] text-slate-400">
-                {selectedDriver} {t('storages.common.driver') || 'Driver configuration'}
+                {t.has(`drivers.drivers.${selectedDriver}`) ? t(`drivers.drivers.${selectedDriver}`) : selectedDriver} · {t('storages.common.driver') || 'Driver configuration'}
               </p>
             </div>
           </div>
@@ -324,10 +324,12 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
                     value={selectedDriver}
                     disabled={!!storageId}
                     onChange={(val) => handleDriverChange(val)}
-                    options={Object.keys(drivers).map((d) => ({
-                      value: d,
-                      label: d,
-                    }))}
+                    options={Object.keys(drivers)
+                      .filter((d) => d !== 'drivers')
+                      .map((d) => ({
+                        value: d,
+                        label: t.has(`drivers.drivers.${d}`) ? `${t(`drivers.drivers.${d}`)} (${d})` : d,
+                      }))}
                     className="w-full"
                     triggerClassName="h-10 text-base sm:text-xs w-full bg-slate-50 dark:bg-slate-950/60 dark:border-slate-800 font-semibold"
                   />
@@ -365,8 +367,8 @@ export const AddOrEditStorageModal: React.FC<AddOrEditStorageModalProps> = ({
               {/* Additional driver fields */}
               {currentDriverInfo && (
                 <div className="space-y-4 pt-2">
-                  <h4 className="border-b border-slate-100 pb-2 text-xs font-bold uppercase tracking-wider text-slate-400 dark:border-slate-800">
-                    {selectedDriver}
+                  <h4 className="border-b border-slate-100 pb-2 text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 dark:border-slate-800">
+                    {t.has(`drivers.drivers.${selectedDriver}`) ? t(`drivers.drivers.${selectedDriver}`) : selectedDriver}
                   </h4>
                   <div className="space-y-4">
                     {currentDriverInfo.additional.map((item) =>

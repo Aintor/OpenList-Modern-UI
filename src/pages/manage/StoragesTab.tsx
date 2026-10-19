@@ -165,8 +165,8 @@ export const StoragesTab: React.FC = () => {
                 <div className="mt-3 space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
                   <div className="flex items-center space-x-2">
                     <span className="text-slate-400 dark:text-slate-500">{t('storages.common.driver') || '驱动'}:</span>
-                    <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200 font-mono text-[11px]">
-                      {storage.driver}
+                    <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200 font-medium text-[11px]">
+                      {t.has(`drivers.drivers.${storage.driver}`) ? t(`drivers.drivers.${storage.driver}`) : storage.driver}
                     </span>
                   </div>
                   {storage.remark && (
