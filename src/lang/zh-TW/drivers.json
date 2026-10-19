@@ -267,6 +267,27 @@
       "first": "寫入首個有效路徑"
     }
   },
+  "AliyunOSS": {
+    "access_key_id": "訪問密鑰 ID",
+    "bucket": "存儲桶",
+    "custom_host": "自定義主機",
+    "custom_host-tips": "自定義/CDN/ESA 域名，例如 https://cdn.example.com",
+    "direct_upload_host": "直傳主機",
+    "direct_upload_host-tips": "直傳主機域名，留空則默認使用 OSS 端點",
+    "enable_direct_upload": "啟用前端直傳",
+    "endpoint": "端點",
+    "image_thumb_value": "圖片縮略圖參數值",
+    "image_thumb_value-tips": "阿里雲 OSS 圖片縮略處理參數（例如：image/resize,w_300/format,jpg）",
+    "secret_access_key": "訪問密鑰",
+    "security_token": "安全令牌",
+    "security_token-tips": "使用臨時憑據時的 STS 令牌",
+    "sign_url_expire": "簽名鏈接有效期",
+    "sign_url_expire-tips": "URL 簽名有效時間（小時）",
+    "thumb_query_value": "視頻縮略圖參數值",
+    "thumb_query_value-tips": "阿里雲 OSS 視頻截幀處理參數（例如：video/snapshot,t_1000,f_jpg,w_300,h_200,m_fast）",
+    "thumbnail": "視頻與圖片縮略圖",
+    "thumbnail-tips": "開啟視頻和圖片的預覽縮略圖功能"
+  },
   "Aliyundrive": {
     "internal_upload": "內部上傳",
     "order_by": "排序依據",
@@ -1689,7 +1710,8 @@
     "WeiYun": {},
     "WoPan": {},
     "YandexDisk": {},
-    "cloudflare_imgbed": {}
+    "cloudflare_imgbed": {},
+    "AliyunOSS": {}
   },
   "drivers": {
     "115 Cloud": "115 網盤",
@@ -1706,6 +1728,7 @@
     "AList V3": "AList v3",
     "AliDoc": "AliDoc",
     "Alias": "別名",
+    "AliyunOSS": "阿里雲 OSS",
     "Aliyundrive": "阿里雲盤",
     "AliyundriveOpen": "阿里雲盤（Oauth2）",
     "AliyundriveShare": "阿里雲盤分享",

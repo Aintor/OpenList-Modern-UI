@@ -85,7 +85,7 @@ export const TransferPopover: React.FC = () => {
 
       {/* 1. Desktop Popover Dropdown Card (>= 768px) */}
       {!isMobile && isOpen && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-[400px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-2xl shadow-black/15 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-900/95 animate-in fade-in zoom-in-95 duration-150 select-none">
+        <div className="absolute right-0 top-full mt-2 z-50 w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-2xl shadow-black/15 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-900/95 animate-in fade-in zoom-in-95 duration-150 select-none">
           <TransferPanel isMobile={false} onClose={() => setOpen(false)} />
         </div>
       )}

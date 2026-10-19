@@ -267,6 +267,27 @@
       "first": "Write into the first conflict path"
     }
   },
+  "AliyunOSS": {
+    "access_key_id": "Access key id",
+    "bucket": "Bucket",
+    "custom_host": "Custom host",
+    "custom_host-tips": "Custom / CDN / ESA domain, e.g. https://cdn.example.com",
+    "direct_upload_host": "Direct upload host",
+    "direct_upload_host-tips": "Direct upload host, leave empty to use default OSS endpoint",
+    "enable_direct_upload": "Enable direct upload",
+    "endpoint": "Endpoint",
+    "image_thumb_value": "Image thumbnail parameter",
+    "image_thumb_value-tips": "OSS image process parameter (e.g. image/resize,w_300/format,jpg)",
+    "secret_access_key": "Secret access key",
+    "security_token": "Security token",
+    "security_token-tips": "STS token if using temporary credentials",
+    "sign_url_expire": "Sign URL expire",
+    "sign_url_expire-tips": "URL signature expiry time in hours",
+    "thumb_query_value": "Video thumbnail parameter",
+    "thumb_query_value-tips": "OSS video snapshot parameter (e.g. video/snapshot,t_1000,f_jpg,w_300,h_200,m_fast)",
+    "thumbnail": "Thumbnail",
+    "thumbnail-tips": "Enable video snapshot and image preview thumbnails"
+  },
   "Aliyundrive": {
     "internal_upload": "Internal upload",
     "order_by": "Order by",
@@ -1689,7 +1710,8 @@
     "WeiYun": {},
     "WoPan": {},
     "YandexDisk": {},
-    "cloudflare_imgbed": {}
+    "cloudflare_imgbed": {},
+    "AliyunOSS": {}
   },
   "drivers": {
     "115 Cloud": "115 Cloud",
@@ -1706,6 +1728,7 @@
     "AList V3": "AList V3",
     "AliDoc": "AliDoc",
     "Alias": "Alias",
+    "AliyunOSS": "Aliyun OSS",
     "Aliyundrive": "Aliyundrive",
     "AliyundriveOpen": "AliyundriveOpen",
     "AliyundriveShare": "AliyundriveShare",

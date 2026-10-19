@@ -816,28 +816,30 @@ const PackageTaskItem: React.FC<{
                 </span>
               </div>
 
-              <div className="flex items-center space-x-1.5 shrink-0 font-mono tabular-nums text-[9px] text-slate-400">
-                <span>{getFileSize(file.size)}</span>
-                {!isCanceled && !isPaused && file.status === 'downloading' && (
-                  <span className="w-7 text-right font-semibold text-indigo-600 dark:text-indigo-400">
-                    {file.progress}%
-                  </span>
-                )}
-                {file.status === 'success' && (
-                  <span className="w-7 text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                    {t('home.transfer.ready') || '就绪'}
-                  </span>
-                )}
-                {isPaused && (
-                  <span className="w-7 text-right text-amber-500 font-medium">
-                    {t('home.transfer.waiting') || '等待'}
-                  </span>
-                )}
-                {isCanceled && (
-                  <span className="w-7 text-right text-slate-400">
-                    {t('home.transfer.stopped') || '停止'}
-                  </span>
-                )}
+              <div className="flex items-center space-x-2 shrink-0 font-mono tabular-nums text-[10px]">
+                <span className="w-14 text-right text-slate-400 dark:text-slate-500">{getFileSize(file.size)}</span>
+                <div className="w-10 text-right">
+                  {!isCanceled && !isPaused && file.status === 'downloading' && (
+                    <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                      {file.progress}%
+                    </span>
+                  )}
+                  {file.status === 'success' && (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      就绪
+                    </span>
+                  )}
+                  {isPaused && (
+                    <span className="text-amber-500 font-medium">
+                      等待
+                    </span>
+                  )}
+                  {isCanceled && (
+                    <span className="text-slate-400">
+                      停止
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -1012,24 +1014,24 @@ const FolderGroupTaskItem: React.FC<{
                 <span>关联该文件夹 ({missingFiles.length} 个待关联)</span>
               </button>
             ) : isPaused ? (
-              <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                {t('home.transfer.paused') || '已暂停'} ({completedCount}/{totalCount})
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
+                {t('home.transfer.paused') || '已暂停'}
               </span>
             ) : hasError ? (
-              <span className="text-rose-500 font-semibold truncate">
+              <span className="text-rose-500 font-medium truncate">
                 部分文件上传失败
               </span>
             ) : isUploading ? (
-              <>
-                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                  {t('home.transfer.uploading') || '上传中'} ({completedCount}/{totalCount})
+              <div className="flex items-center space-x-1.5 font-medium">
+                <span className="text-indigo-600 dark:text-indigo-400">
+                  {t('home.transfer.uploading') || '上传中'}
                 </span>
                 {groupSpeed > 0 && (
                   <span className="font-mono tabular-nums text-slate-400">
-                    {getFileSize(groupSpeed)}/s
+                    · {getFileSize(groupSpeed)}/s
                   </span>
                 )}
-              </>
+              </div>
             ) : (
               <span>{t('home.upload.pending') || '排队中...'}</span>
             )}
@@ -1120,101 +1122,117 @@ const FolderGroupTaskItem: React.FC<{
             return (
               <div
                 key={task.id}
-                className="flex items-center justify-between pt-1 text-[10px] text-slate-600 dark:text-slate-300"
+                className="group relative flex items-center justify-between py-1.5 px-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/50 text-[11px] text-slate-600 dark:text-slate-300 transition-colors"
               >
-                <div className="flex items-center space-x-1.5 truncate flex-1 min-w-0 pr-2">
+                <div className="flex items-center space-x-2 truncate flex-1 min-w-0 pr-2">
                   {isSubSuccess ? (
-                    <Check className="h-2.5 w-2.5 text-emerald-500 shrink-0" />
+                    <Check className="h-3 w-3 text-emerald-500 shrink-0" />
                   ) : isSubUploading ? (
-                    <Loader2 className="h-2.5 w-2.5 text-indigo-600 dark:text-indigo-400 animate-spin shrink-0" />
+                    <Loader2 className="h-3 w-3 text-indigo-600 dark:text-indigo-400 animate-spin shrink-0" />
                   ) : task.status === 'paused' ? (
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 ml-0.5 mr-0.5" />
                   ) : isSubMissing ? (
-                    <AlertCircle className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                    <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
                   ) : task.status === 'error' ? (
-                    <X className="h-2.5 w-2.5 text-rose-500 shrink-0" />
+                    <X className="h-3 w-3 text-rose-500 shrink-0" />
                   ) : (
-                    <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0 ml-0.5 mr-1" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0 ml-0.5 mr-0.5" />
                   )}
 
                   <span
                     className={`truncate ${
-                      isSubUploading ? 'font-semibold text-slate-800 dark:text-slate-100' : ''
+                      isSubUploading ? 'font-medium text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-300'
                     }`}
                     title={task.relativePath || task.name}
                   >
-                    {task.relativePath || task.name}
+                    {task.name}
                   </span>
                 </div>
 
-                <div className="flex items-center space-x-1.5 shrink-0 font-mono tabular-nums text-[9px] text-slate-400">
-                  <span>{getFileSize(task.size)}</span>
-
-                  {isSubUploading && (
-                    <span className="w-7 text-right font-semibold text-indigo-600 dark:text-indigo-400">
-                      {task.progress}%
+                <div className="relative flex items-center shrink-0 font-mono tabular-nums text-[10px]">
+                  {/* Normal status column */}
+                  <div className="flex items-center space-x-2 group-hover:opacity-0 transition-opacity">
+                    <span className="w-14 text-right text-slate-400 dark:text-slate-500">
+                      {getFileSize(task.size)}
                     </span>
-                  )}
 
-                  {isSubSuccess && (
-                    <span className="w-7 text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                      已完成
-                    </span>
-                  )}
+                    <div className="w-10 text-right">
+                      {isSubUploading && (
+                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                          {task.progress}%
+                        </span>
+                      )}
+                      {isSubSuccess && (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          已完成
+                        </span>
+                      )}
+                      {task.status === 'paused' && (
+                        <span className="text-amber-500 font-medium">
+                          已暂停
+                        </span>
+                      )}
+                      {task.status === 'pending' && !isSubUploading && (
+                        <span className="text-slate-400">
+                          等待中
+                        </span>
+                      )}
+                      {task.status === 'error' && (
+                        <span className="text-rose-500 font-medium">
+                          失败
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                  {task.status === 'paused' && (
-                    <span className="w-7 text-right text-amber-500 font-medium">
-                      已暂停
-                    </span>
-                  )}
+                  {/* Hover action buttons */}
+                  <div className="absolute right-0 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {isSubMissing && !isSubSuccess && (
+                      <button
+                        onClick={() => {
+                          setActiveSingleTaskId(task.id)
+                          singleFileInputRef.current?.click()
+                        }}
+                        className="text-amber-600 dark:text-amber-400 hover:underline cursor-pointer font-medium text-[10px] mr-1"
+                        title="单独选择该文件"
+                      >
+                        重新选择
+                      </button>
+                    )}
 
-                  {isSubMissing && !isSubSuccess && (
-                    <button
-                      onClick={() => {
-                        setActiveSingleTaskId(task.id)
-                        singleFileInputRef.current?.click()
-                      }}
-                      className="text-amber-600 dark:text-amber-400 hover:underline cursor-pointer font-medium"
-                      title="单独选择该文件"
-                    >
-                      重新选择
-                    </button>
-                  )}
-
-                  <div className="flex items-center space-x-0.5 pl-1">
                     {isSubUploading && (
                       <button
                         onClick={() => onPauseTask(task.id)}
                         title="暂停"
-                        className="rounded p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        className="rounded p-1 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 cursor-pointer transition-colors"
                       >
-                        <Pause className="h-2.5 w-2.5" />
+                        <Pause className="h-3 w-3" />
                       </button>
                     )}
                     {task.status === 'paused' && (
                       <button
                         onClick={() => onResumeTask(task.id)}
                         title="继续"
-                        className="rounded p-0.5 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 cursor-pointer"
+                        className="rounded p-1 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/60 cursor-pointer transition-colors"
                       >
-                        <Play className="h-2.5 w-2.5" />
+                        <Play className="h-3 w-3" />
                       </button>
                     )}
                     {(task.status === 'error' || task.status === 'canceled') && (
                       <button
                         onClick={() => onRetryTask(task.id)}
                         title="重试"
-                        className="rounded p-0.5 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 cursor-pointer"
+                        className="rounded p-1 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-indigo-400 cursor-pointer transition-colors"
                       >
-                        <RotateCcw className="h-2.5 w-2.5" />
+                        <RotateCcw className="h-3 w-3" />
                       </button>
                     )}
                     <button
                       onClick={() => onRemoveTask(task.id)}
                       title="删除"
-                      className="rounded p-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                      className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/60 dark:hover:text-rose-400 cursor-pointer transition-colors"
                     >
-                      <Trash2 className="h-2.5 w-2.5" />
+                      <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
                 </div>

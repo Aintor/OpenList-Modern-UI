@@ -75,7 +75,9 @@ export type MultipartInitResp = Resp<MultipartSnapshot & { resumed: boolean }>
 
 export interface HttpDirectUploadInfo {
   upload_url: string
+  fallback_url?: string
   method?: string
+  fallback_method?: string
   chunk_size?: number
   headers?: Record<string, string>
 }

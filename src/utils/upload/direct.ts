@@ -51,34 +51,93 @@ export const directUpload = async (options: UploadOptions): Promise<void> => {
   const chunkSize = uploadInfo.chunk_size || 0
   const uploadURL = uploadInfo.upload_url
   const method = uploadInfo.method || 'PUT'
+  const fallbackURL = uploadInfo.fallback_url
+  const fallbackMethod = uploadInfo.fallback_method || method
 
-  if (chunkSize > 0 && file.size > chunkSize) {
-    await uploadChunked({
-      file,
-      uploadURL,
-      chunkSize,
-      method,
-      headers: uploadInfo.headers,
-      signal,
-      onProgress,
-      directFallbackMinSizeMB,
-      directFallbackMinSpeedKB,
-      directFallbackDurationSec,
-      enableCdnFallback,
-    })
-  } else {
-    await uploadSingle({
-      file,
-      uploadURL,
-      method,
-      headers: uploadInfo.headers,
-      signal,
-      onProgress,
-      directFallbackMinSizeMB,
-      directFallbackMinSpeedKB,
-      directFallbackDurationSec,
-      enableCdnFallback,
-    })
+  // If fallback_url is provided (e.g. ESA accelerated domain), automatically activate speed watchdog
+  const shouldEnableFallback = enableCdnFallback || Boolean(fallbackURL)
+
+  try {
+    if (chunkSize > 0 && file.size > chunkSize) {
+      await uploadChunked({
+        file,
+        uploadURL,
+        chunkSize,
+        method,
+        headers: uploadInfo.headers,
+        signal,
+        onProgress,
+        directFallbackMinSizeMB,
+        directFallbackMinSpeedKB,
+        directFallbackDurationSec,
+        enableCdnFallback: shouldEnableFallback,
+      })
+    } else {
+      await uploadSingle({
+        file,
+        uploadURL,
+        method,
+        headers: uploadInfo.headers,
+        signal,
+        onProgress,
+        directFallbackMinSizeMB,
+        directFallbackMinSpeedKB,
+        directFallbackDurationSec,
+        enableCdnFallback: shouldEnableFallback,
+      })
+    }
+  } catch (err: any) {
+    if (signal?.aborted) throw err
+
+    // If direct upload to source station was slow or failed, and an ESA/accelerated fallback URL exists:
+    if (
+      fallbackURL &&
+      (err instanceof DirectUploadSlowError ||
+        err?.name === 'DirectUploadSlowError' ||
+        err?.message?.includes('network') ||
+        err?.message?.includes('timeout') ||
+        err?.message?.includes('CORS'))
+    ) {
+      console.info(`[DirectUpload] ${err.message}. Seamlessly switching to ESA edge upload`)
+      onProgress?.({
+        status: 'uploading',
+        engine: 'direct',
+        progress: 0,
+        loaded: 0,
+        speed: 0,
+      })
+
+      if (chunkSize > 0 && file.size > chunkSize) {
+        await uploadChunked({
+          file,
+          uploadURL: fallbackURL,
+          chunkSize,
+          method: fallbackMethod,
+          headers: uploadInfo.headers,
+          signal,
+          onProgress,
+          directFallbackMinSizeMB,
+          directFallbackMinSpeedKB,
+          directFallbackDurationSec,
+          enableCdnFallback: false, // Don't fallback again from fallback
+        })
+      } else {
+        await uploadSingle({
+          file,
+          uploadURL: fallbackURL,
+          method: fallbackMethod,
+          headers: uploadInfo.headers,
+          signal,
+          onProgress,
+          directFallbackMinSizeMB,
+          directFallbackMinSpeedKB,
+          directFallbackDurationSec,
+          enableCdnFallback: false, // Don't fallback again from fallback
+        })
+      }
+    } else {
+      throw err
+    }
   }
 
   onProgress?.({ progress: 100, loaded: file.size, speed: 0, status: 'success' })
