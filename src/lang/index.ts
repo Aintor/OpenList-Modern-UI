@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { dict as zhCN } from './zh-CN/entry'
 import { dict as zhTW } from './zh-TW/entry'
@@ -116,11 +117,13 @@ export type TFunction = {
 
 export const useT = (): TFunction => {
   const locale = useI18n((s) => s.locale)
-  const t = ((key: string, vars?: Record<string, string | number>): string => {
-    return translate(locale, key, vars)
-  }) as TFunction
+  return useMemo(() => {
+    const t = ((key: string, vars?: Record<string, string | number>): string => {
+      return translate(locale, key, vars)
+    }) as TFunction
 
-  t.has = (key: string): boolean => hasTranslation(locale, key)
+    t.has = (key: string): boolean => hasTranslation(locale, key)
 
-  return t
+    return t
+  }, [locale])
 }

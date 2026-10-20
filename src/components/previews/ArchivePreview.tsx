@@ -33,7 +33,7 @@ interface ArchiveEntry {
 
 export const ArchivePreview: React.FC<ArchivePreviewProps> = ({ filePath }) => {
   const t = useT()
-  const { password: folderPassword } = useObjStore()
+  const folderPassword = useObjStore((s) => s.password)
   const [currentInnerPath, setCurrentInnerPath] = useState('')
   const [entries, setEntries] = useState<ArchiveEntry[]>([])
   const [loading, setLoading] = useState(false)
@@ -110,7 +110,7 @@ export const ArchivePreview: React.FC<ArchivePreviewProps> = ({ filePath }) => {
   useEffect(() => {
     fetchMeta(archivePass)
     fetchArchiveContent('', archivePass)
-  }, [fetchMeta, fetchArchiveContent, archivePass])
+  }, [filePath, folderPassword, archivePass])
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
