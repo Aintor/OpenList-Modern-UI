@@ -37,6 +37,22 @@ const applyTheme = (t: ThemeMode) => {
   }
 }
 
+// Listen to OS system color scheme changes when in 'system' mode
+if (typeof window !== 'undefined' && window.matchMedia) {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  const handleSystemThemeChange = () => {
+    const currentTheme = (localStorage.getItem('theme-mode') as ThemeMode) || 'system'
+    if (currentTheme === 'system') {
+      applyTheme('system')
+    }
+  }
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener('change', handleSystemThemeChange)
+  } else if ('addListener' in mediaQuery) {
+    ;(mediaQuery as any).addListener(handleSystemThemeChange)
+  }
+}
+
 export const setDynamicFaviconAndIcons = (iconUrl: string, appleIconUrl?: string) => {
   if (!iconUrl) return
 
@@ -82,7 +98,7 @@ const applyDocumentSettings = (settings: Record<string, string>) => {
 
 export const useSettingsStore = create<SettingsState>((set, get) => {
   // 1. Initialize theme
-  const savedTheme = (localStorage.getItem('theme-mode') as ThemeMode) || 'light'
+  const savedTheme = (localStorage.getItem('theme-mode') as ThemeMode) || 'system'
   const savedLayout = (localStorage.getItem('layout-mode') as LayoutMode) || 'grid'
   applyTheme(savedTheme)
 

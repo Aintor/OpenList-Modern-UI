@@ -16,6 +16,7 @@ import { Obj, ObjType } from '~/types'
 import { notify } from '~/utils/notify'
 import { fsGet } from '~/utils/api'
 import { ArchivePreview } from './ArchivePreview'
+import { ImageViewer } from './ImageViewer'
 const PdfViewer = React.lazy(() => import('./PdfViewer').then((m) => ({ default: m.PdfViewer })))
 import { useI18n, useT } from '~/lang'
 import { useObjStore } from '~/store/useObjStore'
@@ -246,13 +247,9 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
             </div>
           ) : (
             <>
-              {/* Image Preview */}
+              {/* Image Preview with Native Gestures */}
               {isImage && effectiveRawUrl && (
-                <img
-                  src={effectiveRawUrl}
-                  alt={obj.name}
-                  className="max-h-[75vh] max-w-full rounded-xl object-contain shadow-md select-none pointer-events-auto"
-                />
+                <ImageViewer url={effectiveRawUrl} alt={obj.name} fileName={obj.name} />
               )}
 
               {/* Video.js v10 Modern React Player */}
