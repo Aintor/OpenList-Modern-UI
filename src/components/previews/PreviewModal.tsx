@@ -80,11 +80,8 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 
   const isArchive =
     targetObj &&
-    (targetObj.name.endsWith('.zip') ||
-      targetObj.name.endsWith('.rar') ||
-      targetObj.name.endsWith('.7z') ||
-      targetObj.name.endsWith('.tar') ||
-      targetObj.name.endsWith('.gz'))
+    (['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'iso', 'zst'].includes(ext) ||
+      targetObj.name.toLowerCase().endsWith('.tar.gz'))
 
   const isPdf = targetObj && targetObj.name.toLowerCase().endsWith('.pdf')
   const isOffice =

@@ -88,7 +88,11 @@
     "archive": {
       "input_password": "Please input extraction password",
       "incorrect_password": "Incorrect password",
-      "extract_header": "Extract {{path}} to..."
+      "extract_header": "Extract {{path}} to...",
+      "encrypted_title": "Password Protected Archive",
+      "enter_password_tip": "This archive is encrypted. Please enter the password to view and download files.",
+      "password_placeholder": "Enter archive password",
+      "password_error": "Incorrect archive password, please try again"
     },
     "share": "Share",
     "copy_link": "Copy link",

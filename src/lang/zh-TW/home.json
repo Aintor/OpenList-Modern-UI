@@ -88,7 +88,11 @@
     "archive": {
       "input_password": "請輸入解壓密碼",
       "incorrect_password": "密碼錯誤",
-      "extract_header": "解壓 {{path}} 到..."
+      "extract_header": "解壓 {{path}} 到...",
+      "encrypted_title": "受密碼保護的壓縮包",
+      "enter_password_tip": "該壓縮檔案已加密，請輸入解壓密碼以查看和下載內部檔案",
+      "password_placeholder": "輸入解壓密碼",
+      "password_error": "壓縮包解壓密碼錯誤，請重新輸入"
     },
     "share": "分享",
     "copy_link": "複製鏈接",
