@@ -1,5 +1,5 @@
 import { r } from '~/utils/request'
-import { UploadOptions, HttpDirectUploadInfo } from './types'
+import { UploadOptions, HttpDirectUploadInfo, DirectUploadPart } from './types'
 
 export class DirectUploadSlowError extends Error {
   constructor(message = 'Direct upload too slow') {
@@ -56,6 +56,23 @@ export const directUpload = async (options: UploadOptions): Promise<void> => {
 
   // If fallback_url is provided (e.g. ESA accelerated domain), automatically activate speed watchdog
   const shouldEnableFallback = enableCdnFallback || Boolean(fallbackURL)
+
+  // Case 1: OSS Native Multipart Direct Upload (presigned parts array provided)
+  if (uploadInfo.upload_id && uploadInfo.parts && uploadInfo.parts.length > 0) {
+    await uploadMultipartDirect({
+      file,
+      dirPath,
+      uploadInfo,
+      signal,
+      onProgress,
+      directFallbackMinSizeMB,
+      directFallbackMinSpeedKB,
+      directFallbackDurationSec,
+      enableCdnFallback: shouldEnableFallback,
+    })
+    onProgress?.({ progress: 100, loaded: file.size, speed: 0, status: 'success' })
+    return
+  }
 
   try {
     if (chunkSize > 0 && file.size > chunkSize) {
@@ -410,5 +427,253 @@ async function uploadChunked(params: ChunkedUploadParams): Promise<void> {
 
       xhr.send(chunk)
     })
+  }
+}
+
+interface MultipartDirectUploadParams {
+  file: File
+  dirPath: string
+  uploadInfo: HttpDirectUploadInfo
+  signal?: AbortSignal
+  onProgress?: UploadOptions['onProgress']
+  directFallbackMinSizeMB: number
+  directFallbackMinSpeedKB: number
+  directFallbackDurationSec: number
+  enableCdnFallback: boolean
+}
+
+async function uploadMultipartDirect(params: MultipartDirectUploadParams): Promise<void> {
+  const {
+    file,
+    dirPath,
+    uploadInfo,
+    signal,
+    onProgress,
+    directFallbackMinSizeMB,
+    directFallbackMinSpeedKB,
+    directFallbackDurationSec,
+    enableCdnFallback,
+  } = params
+
+  const parts = uploadInfo.parts || []
+  const uploadId = uploadInfo.upload_id || ''
+  const chunkSize = uploadInfo.chunk_size || 10 * 1024 * 1024
+  const completedParts: DirectUploadPart[] = []
+
+  let uploadedBytes = 0
+  let lastTime = Date.now()
+  let lastLoadedSum = 0
+  const startTime = Date.now()
+  let slowCount = 0
+  let smoothedSpeed = 0
+  let useFallbackChannel = false
+
+  const abortUploadOnServer = async () => {
+    try {
+      await r.post('/fs/abort_direct_upload', {
+        path: dirPath,
+        file_name: file.name,
+        upload_id: uploadId,
+      })
+    } catch (e) {
+      console.warn('[DirectUpload] Failed to abort multipart upload on server:', e)
+    }
+  }
+
+  for (let i = 0; i < parts.length; i++) {
+    if (signal?.aborted) {
+      await abortUploadOnServer()
+      throw new Error('Upload canceled')
+    }
+
+    const part = parts[i]
+    const start = (part.part_number - 1) * chunkSize
+    const end = Math.min(start + chunkSize, file.size)
+    const chunk = file.slice(start, end)
+
+    const uploadSingleChunk = (targetUrl: string, allowFallback: boolean): Promise<string> => {
+      return new Promise<string>((resolve, reject) => {
+        if (signal?.aborted) return reject(new Error('Upload canceled'))
+
+        const xhr = new XMLHttpRequest()
+        let partLastLoaded = 0
+
+        const onAbort = () => {
+          xhr.abort()
+          reject(new Error('Upload canceled'))
+        }
+
+        if (signal) {
+          signal.addEventListener('abort', onAbort)
+        }
+
+        const cleanup = () => {
+          if (signal) signal.removeEventListener('abort', onAbort)
+        }
+
+        // Connection watchdog: if 15s without any progress event
+        const watchdogTimer = setTimeout(() => {
+          if (partLastLoaded === 0 && !signal?.aborted) {
+            cleanup()
+            xhr.abort()
+            reject(new DirectUploadSlowError('Direct part upload handshake timeout'))
+          }
+        }, 15000)
+
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable && onProgress) {
+            clearTimeout(watchdogTimer)
+            const totalLoaded = uploadedBytes + e.loaded
+            const percent = Math.min(99, Math.round((totalLoaded / file.size) * 100))
+            const now = Date.now()
+            const duration = (now - lastTime) / 1000
+
+            let currentSpeed = 0
+            if (duration >= 0.5) {
+              const instantSpeed = Math.max(0, (totalLoaded - lastLoadedSum) / duration)
+              smoothedSpeed = smoothedSpeed > 0 ? smoothedSpeed * 0.7 + instantSpeed * 0.3 : instantSpeed
+              currentSpeed = instantSpeed
+              lastLoadedSum = totalLoaded
+              lastTime = now
+
+              // Speed watchdog check
+              const elapsed = (now - startTime) / 1000
+              if (
+                allowFallback &&
+                elapsed >= 4 &&
+                file.size >= directFallbackMinSizeMB * 1024 * 1024
+              ) {
+                const minSpeedBps = directFallbackMinSpeedKB * 1024
+                if (smoothedSpeed < minSpeedBps) {
+                  slowCount += duration
+                  if (slowCount >= directFallbackDurationSec) {
+                    cleanup()
+                    xhr.abort()
+                    return reject(
+                      new DirectUploadSlowError(
+                        `Direct part speed ${(smoothedSpeed / 1024).toFixed(1)} KB/s below threshold`
+                      )
+                    )
+                  }
+                } else {
+                  slowCount = Math.max(0, slowCount - duration * 0.5)
+                }
+              }
+            }
+
+            onProgress({
+              progress: percent,
+              loaded: totalLoaded,
+              speed: currentSpeed > 0 ? currentSpeed : undefined,
+              status: totalLoaded >= file.size ? 'backending' : 'uploading',
+              engine: 'direct',
+            })
+          }
+        })
+
+        xhr.addEventListener('load', () => {
+          cleanup()
+          clearTimeout(watchdogTimer)
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const rawEtag =
+              xhr.getResponseHeader('ETag') ||
+              xhr.getResponseHeader('etag') ||
+              xhr.getResponseHeader('Etag') ||
+              ''
+            const etag = rawEtag.replace(/"/g, '')
+            if (!etag) {
+              return reject(
+                new Error(
+                  `Direct chunk ${part.part_number} succeeded but ETag response header is missing. Please ensure Bucket CORS exposes ETag header.`
+                )
+              )
+            }
+            resolve(etag)
+          } else {
+            reject(new Error(`Direct chunk ${part.part_number} failed with status ${xhr.status}`))
+          }
+        })
+
+        xhr.addEventListener('error', () => {
+          cleanup()
+          clearTimeout(watchdogTimer)
+          reject(new Error(`Direct chunk ${part.part_number} network or CORS error`))
+        })
+
+        xhr.open('PUT', targetUrl)
+        if (uploadInfo.headers) {
+          Object.entries(uploadInfo.headers).forEach(([k, v]) => {
+            xhr.setRequestHeader(k, v)
+          })
+        }
+        xhr.send(chunk)
+      })
+    }
+
+    const currentUploadUrl =
+      useFallbackChannel && part.fallback_url ? part.fallback_url : part.upload_url
+
+    try {
+      const etag = await uploadSingleChunk(
+        currentUploadUrl,
+        enableCdnFallback && Boolean(part.fallback_url) && !useFallbackChannel
+      )
+      completedParts.push({ part_number: part.part_number, etag })
+      uploadedBytes += chunk.size
+    } catch (err: any) {
+      if (signal?.aborted) {
+        await abortUploadOnServer()
+        throw err
+      }
+
+      // If failed or slow on primary channel, and fallback exists, switch to fallback URL (ESA edge)
+      if (!useFallbackChannel && part.fallback_url) {
+        console.info(
+          `[DirectUpload] Part ${part.part_number} direct upload encountered issue (${err.message}). Seamlessly switching to ESA edge upload`
+        )
+        useFallbackChannel = true
+        try {
+          const etag = await uploadSingleChunk(part.fallback_url, false)
+          completedParts.push({ part_number: part.part_number, etag })
+          uploadedBytes += chunk.size
+        } catch (fallbackErr: any) {
+          await abortUploadOnServer()
+          throw fallbackErr
+        }
+      } else {
+        await abortUploadOnServer()
+        throw err
+      }
+    }
+  }
+
+  // All parts successfully uploaded to storage/edge!
+  onProgress?.({
+    status: 'backending',
+    engine: 'direct',
+    progress: 99,
+    loaded: file.size,
+    speed: 0,
+  })
+
+  // Complete multipart upload on backend
+  try {
+    await r.post(
+      '/fs/complete_direct_upload',
+      {
+        path: dirPath,
+        file_name: file.name,
+        upload_id: uploadId,
+        parts: completedParts,
+      },
+      { signal }
+    )
+  } catch (completeErr: any) {
+    if (signal?.aborted) {
+      await abortUploadOnServer()
+      throw new Error('Upload canceled')
+    }
+    await abortUploadOnServer()
+    throw completeErr
   }
 }
