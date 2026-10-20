@@ -229,45 +229,65 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
 
       {/* Tabs */}
       {tasks.length > 0 && (
-        <div className="flex items-center space-x-1 p-0.5 mb-2.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-[11px] font-medium">
+        <div className="flex items-center space-x-1 p-0.5 mb-2.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-[11px]">
           <button
             onClick={() => setActiveTab('all')}
-            className={`flex-1 flex items-center justify-center space-x-1 py-1 rounded-md transition-all cursor-pointer ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-1.5 rounded-md transition-all cursor-pointer ${
               activeTab === 'all'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-semibold'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium'
             }`}
           >
             <span>{t('home.transfer.tab_all') || '全部'}</span>
-            <span className="font-mono text-[10px] opacity-75">({allSortedItems.length})</span>
+            <span
+              className={`inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[10px] font-mono tabular-nums leading-none transition-colors ${
+                activeTab === 'all'
+                  ? 'bg-slate-100 text-slate-700 dark:bg-slate-600 dark:text-slate-200'
+                  : 'bg-slate-200/70 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+              }`}
+            >
+              {allSortedItems.length}
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('active')}
-            className={`flex-1 flex items-center justify-center space-x-1 py-1 rounded-md transition-all cursor-pointer ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-1.5 rounded-md transition-all cursor-pointer ${
               activeTab === 'active'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-semibold'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium'
             }`}
           >
             <span>{t('home.transfer.tab_active') || '进行中'}</span>
             {activeItems.length > 0 && (
-              <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">
-                ({activeItems.length})
+              <span
+                className={`inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[10px] font-mono tabular-nums leading-none font-semibold transition-colors ${
+                  activeTab === 'active'
+                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                    : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400'
+                }`}
+              >
+                {activeItems.length}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`flex-1 flex items-center justify-center space-x-1 py-1 rounded-md transition-all cursor-pointer ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-1.5 rounded-md transition-all cursor-pointer ${
               activeTab === 'completed'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-semibold'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium'
             }`}
           >
             <span>{t('home.transfer.tab_completed') || '已完成'}</span>
             {completedItems.length > 0 && (
-              <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                ({completedItems.length})
+              <span
+                className={`inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[10px] font-mono tabular-nums leading-none transition-colors ${
+                  activeTab === 'completed'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-semibold'
+                    : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 font-medium'
+                }`}
+              >
+                {completedItems.length}
               </span>
             )}
           </button>
@@ -370,7 +390,7 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
               className="flex items-center space-x-1 font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
             >
               <Trash2 className="h-3 w-3" />
-              <span>{t('home.transfer.clear_completed') || '清空已完成'} ({completedTasks.length})</span>
+              <span>{t('home.transfer.clear_completed') || '清空已完成'}</span>
             </button>
           )}
         </div>
@@ -745,7 +765,7 @@ const PackageTaskItem: React.FC<{
             ) : (
               <>
                 <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                  {t('home.transfer.package_downloading') || '打包下载中'} ({completedCount}/{totalCount})
+                  {t('home.transfer.package_downloading') || '打包下载中'}
                 </span>
                 {task.speed > 0 && (
                   <span className="font-mono tabular-nums text-slate-400">
@@ -1029,7 +1049,7 @@ const FolderGroupTaskItem: React.FC<{
                 title="页面刷新后文件句柄已释放，点击选择该文件夹即可恢复上传"
               >
                 <FolderUp className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span>关联该文件夹 ({missingFiles.length} 个待关联)</span>
+                <span>重新关联文件夹</span>
               </button>
             ) : isPaused ? (
               <span className="text-amber-600 dark:text-amber-400 font-medium">
