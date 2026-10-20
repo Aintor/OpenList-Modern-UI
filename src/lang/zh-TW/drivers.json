@@ -288,12 +288,14 @@
     "enable_direct_upload-tips": "啟用客戶端直傳 OSS，直傳速度慢時自動降級走 ESA 加速",
     "direct_upload_host": "直傳主機",
     "direct_upload_host-tips": "直傳專用主機域名，留空則默認使用 OSS 端點",
-    "thumbnail": "視頻與圖片縮略圖",
-    "thumbnail-tips": "開啟視頻截幀和圖片縮略圖預覽功能",
+    "thumbnail": "縮略圖預覽",
+    "thumbnail-tips": "開啟視頻截幀、圖片縮略圖及 PDF 第一頁快照預覽功能",
     "thumb_query_value": "視頻縮略圖參數值",
     "thumb_query_value-tips": "阿里雲 OSS 視頻截幀處理參數（例如：video/snapshot,t_1000,f_jpg,w_300,h_200,m_fast）",
     "image_thumb_value": "圖片縮略圖參數值",
-    "image_thumb_value-tips": "阿里雲 OSS 圖片縮略處理參數（例如：image/resize,w_300/format,jpg）"
+    "image_thumb_value-tips": "阿里雲 OSS 圖片縮略處理參數（例如：image/resize,w_300/format,jpg）",
+    "pdf_thumb_value": "PDF 縮略圖參數值",
+    "pdf_thumb_value-tips": "阿里雲 OSS 文檔第一頁快照處理參數（例如：doc/snapshot,target_jpg,source_pdf,page_1/image/resize,w_300,h_200,m_lfit）"
   },
   "Aliyundrive": {
     "internal_upload": "內部上傳",

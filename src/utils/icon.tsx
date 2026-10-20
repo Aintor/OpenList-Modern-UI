@@ -62,7 +62,11 @@ export function getFileIcon(obj: Obj, className = 'w-5 h-5'): React.ReactNode {
   }
 
   // Documents
-  if (['md', 'txt', 'pdf', 'doc', 'docx'].includes(ext)) {
+  if (ext === 'pdf') {
+    return <FileText className={`${className} text-rose-500 fill-rose-500/10`} />
+  }
+
+  if (['md', 'txt', 'doc', 'docx'].includes(ext)) {
     return <FileText className={`${className} text-sky-500 fill-sky-500/10`} />
   }
 
