@@ -288,73 +288,82 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
     <div className="relative flex h-[75vh] w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
       {/* 1. Left Thumbnail Sidebar (macOS Preview Style) */}
       <div
-        className={`relative flex flex-col border-r border-slate-800/80 bg-slate-900/60 backdrop-blur-md transition-all duration-200 ease-in-out shrink-0 overflow-hidden ${
-          isSidebarOpen ? 'w-48 sm:w-56' : 'w-0 border-r-0'
+        className={`relative flex flex-col border-r bg-slate-900/60 backdrop-blur-md transition-[width,border-color] duration-200 ease-in-out shrink-0 overflow-hidden ${
+          isSidebarOpen ? 'w-48 sm:w-56 border-slate-800/80' : 'w-0 border-transparent'
         }`}
       >
-        {/* Sidebar Header */}
-        <div className="flex h-11 items-center justify-between border-b border-slate-800/80 px-3 shrink-0">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-            <PanelLeft className="h-3.5 w-3.5 text-indigo-400" />
-            <span>{t('home.preview.thumbnails') || '缩略图'}</span>
-            <span className="font-mono text-[10px] text-slate-500">({numPages})</span>
-          </div>
-          <button
-            onClick={() => setIsSidebarOpen(false)}
-            title="收起侧边栏"
-            className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors cursor-pointer"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Thumbnail Scroll Area */}
         <div
-          ref={sidebarScrollRef}
-          className="flex-1 overflow-y-auto p-3 space-y-3"
+          className={`flex h-full w-48 sm:w-56 flex-col shrink-0 transition-transform duration-200 ease-in-out ${
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         >
-          {pageMetas.map((meta, index) => {
-            const isCurrent = meta.pageNumber === currentPage
-            return (
-              <div
-                key={meta.pageNumber}
-                ref={(el) => (thumbnailRefs.current[index] = el)}
-                onClick={() => scrollToPage(meta.pageNumber)}
-                className={`group relative flex flex-col items-center rounded-xl p-2 cursor-pointer transition-all duration-150 ${
-                  isCurrent
-                    ? 'bg-indigo-500/15 ring-2 ring-indigo-500 shadow-md'
-                    : 'hover:bg-slate-800/60 ring-1 ring-slate-800/80 hover:ring-slate-700'
-                }`}
-              >
-                {pdfDoc && (
-                  <PdfThumbnailPage
-                    pdfDoc={pdfDoc}
-                    pageNumber={meta.pageNumber}
-                    rotation={rotation}
-                    aspectRatio={meta.aspectRatio}
-                  />
-                )}
+          {/* Sidebar Header */}
+          <div className="flex h-10 items-center justify-between border-b border-slate-800/80 px-3 shrink-0 whitespace-nowrap select-none">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-300 min-w-0">
+              <PanelLeft className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+              <span className="truncate">{t('home.preview.thumbnails')}</span>
+            </div>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              title="收起"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors cursor-pointer shrink-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Thumbnail Scroll Area */}
+          <div
+            ref={sidebarScrollRef}
+            className="flex-1 overflow-y-auto p-3 space-y-3"
+          >
+            {pageMetas.map((meta, index) => {
+              const isCurrent = meta.pageNumber === currentPage
+              return (
                 <div
-                  className={`mt-1.5 text-center font-mono text-[11px] transition-colors ${
-                    isCurrent ? 'text-indigo-400 font-semibold' : 'text-slate-400 group-hover:text-slate-200'
+                  key={meta.pageNumber}
+                  ref={(el) => (thumbnailRefs.current[index] = el)}
+                  onClick={() => scrollToPage(meta.pageNumber)}
+                  className={`group relative flex flex-col items-center rounded-xl p-2 cursor-pointer transition-all duration-150 ${
+                    isCurrent
+                      ? 'bg-indigo-500/15 ring-2 ring-indigo-500 shadow-md'
+                      : 'hover:bg-slate-800/60 ring-1 ring-slate-800/80 hover:ring-slate-700'
                   }`}
                 >
-                  {meta.pageNumber}
+                  {pdfDoc && (
+                    <PdfThumbnailPage
+                      pdfDoc={pdfDoc}
+                      pageNumber={meta.pageNumber}
+                      rotation={rotation}
+                      aspectRatio={meta.aspectRatio}
+                    />
+                  )}
+                  <div
+                    className={`mt-1.5 text-center font-mono text-[11px] whitespace-nowrap transition-colors ${
+                      isCurrent ? 'text-indigo-400 font-semibold' : 'text-slate-400 group-hover:text-slate-200'
+                    }`}
+                  >
+                    {meta.pageNumber}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 
       {/* 2. Main Canvas Scroll Viewport */}
       <div className="relative flex flex-1 flex-col overflow-hidden">
         {/* Floating Sidebar Open Button (When closed) */}
-        {!isSidebarOpen && !loading && !error && numPages > 0 && (
+        {!loading && !error && numPages > 0 && (
           <button
             onClick={() => setIsSidebarOpen(true)}
             title="展开缩略图侧边栏"
-            className="absolute top-4 left-4 z-20 flex h-8 w-8 items-center justify-center rounded-xl border border-slate-700/60 bg-slate-900/85 hover:bg-indigo-500/15 hover:text-indigo-400 text-slate-300 shadow-lg backdrop-blur-xl transition-colors cursor-pointer"
+            className={`absolute top-4 left-4 z-20 flex h-8 w-8 items-center justify-center rounded-xl border border-slate-700/60 bg-slate-900/85 hover:bg-indigo-500/15 hover:text-indigo-400 text-slate-300 shadow-lg backdrop-blur-xl transition-all duration-200 cursor-pointer ${
+              !isSidebarOpen
+                ? 'opacity-100 scale-100 pointer-events-auto delay-150'
+                : 'opacity-0 scale-90 pointer-events-none'
+            }`}
           >
             <PanelLeft className="h-4 w-4" />
           </button>

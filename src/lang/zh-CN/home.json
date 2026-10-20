@@ -30,6 +30,7 @@
     "exit_fullview": "退出网页全屏",
     "auto_fit": "自适应",
     "reset_zoom": "重置缩放",
+    "thumbnails": "缩略图",
     "names": {
       "download": "直接下载",
       "html": "HTML 渲染器",

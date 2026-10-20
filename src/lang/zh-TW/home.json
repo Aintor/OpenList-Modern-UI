@@ -30,6 +30,7 @@
     "exit_fullview": "Exit Full view",
     "auto_fit": "Auto fit",
     "reset_zoom": "Reset zoom",
+    "thumbnails": "縮略圖",
     "names": {
       "download": "直接下載",
       "html": "HTML 渲染器",
