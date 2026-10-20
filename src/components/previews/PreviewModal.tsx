@@ -16,6 +16,7 @@ import { Obj, ObjType } from '~/types'
 import { notify } from '~/utils/notify'
 import { fsGet } from '~/utils/api'
 import { ArchivePreview } from './ArchivePreview'
+const PdfViewer = React.lazy(() => import('./PdfViewer').then((m) => ({ default: m.PdfViewer })))
 import { useI18n, useT } from '~/lang'
 import { useObjStore } from '~/store/useObjStore'
 import { useSettingsStore } from '~/store/useSettingsStore'
@@ -313,11 +314,15 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 
               {/* PDF Viewer */}
               {isPdf && effectiveRawUrl && (
-                <iframe
-                  src={effectiveRawUrl}
-                  title={obj.name}
-                  className="h-[75vh] w-full rounded-2xl border border-slate-800"
-                />
+                <React.Suspense
+                  fallback={
+                    <div className="flex h-[75vh] w-full items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-slate-400">
+                      <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                    </div>
+                  }
+                >
+                  <PdfViewer url={effectiveRawUrl} fileName={obj.name} />
+                </React.Suspense>
               )}
 
               {/* Office Document Embed Viewer */}
