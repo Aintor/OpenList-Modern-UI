@@ -15,7 +15,6 @@ import {
   Inbox,
   X,
   FolderUp,
-  Upload,
   AlertCircle,
 } from 'lucide-react'
 import {
@@ -49,41 +48,9 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
     clearCompleted,
     overwritePolicy,
     setOverwritePolicy,
-    rebindFiles,
   } = useTransferStore()
 
-  const rebindFolderInputRef = useRef<HTMLInputElement>(null)
-  const rebindFileInputRef = useRef<HTMLInputElement>(null)
-
-  const rebindableTasks = tasks.filter(
-    (t) => t.type === 'upload' && !t.file && t.status !== 'success'
-  )
-  const hasExpiredHandles = rebindableTasks.length > 0
-
-  const handleFolderRebind = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return
-    const files = Array.from(e.target.files)
-    const { matched, total } = rebindFiles(files)
-    if (matched > 0) {
-      notify.success(`已成功重新关联 ${matched} 个文件，恢复断点续传！`)
-    } else {
-      notify.warning(`未在选中的文件夹中匹配到对应的 ${total} 个文件`)
-    }
-    e.target.value = ''
-  }
-
-  const handleFilesRebind = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return
-    const files = Array.from(e.target.files)
-    const { matched, total } = rebindFiles(files)
-    if (matched > 0) {
-      notify.success(`已成功重新关联 ${matched} 个文件，恢复断点续传！`)
-    } else {
-      notify.warning(`未匹配到对应的 ${total} 个文件`)
-    }
-    e.target.value = ''
-  }
-
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all')
   const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({})
   const [expandedFolderGroups, setExpandedFolderGroups] = useState<Record<string, boolean>>({})
 
@@ -149,16 +116,42 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
   const isAllDone = tasks.length > 0 && activeCount === 0 && tasks.every((t) => t.status === 'success' || t.status === 'canceled')
 
   // Group tasks for rendering
-  const seenFolderGroups = new Set<string>()
-  const renderItems: Array<
+  type RenderItem =
     | { kind: 'package'; task: TransferTask }
     | { kind: 'folderGroup'; groupId: string; groupName: string; tasks: TransferTask[] }
     | { kind: 'single'; task: TransferTask }
-  > = []
+
+  const getItemPriority = (item: RenderItem): number => {
+    if (item.kind === 'package') {
+      const s = item.task.status
+      if (s === 'downloading' || s === 'processing') return 1
+      if (s === 'pending') return 2
+      if (s === 'paused') return 3
+      if (s === 'error' || s === 'canceled') return 4
+      return 5
+    }
+    if (item.kind === 'folderGroup') {
+      const ts = item.tasks
+      if (ts.some((t) => t.status === 'uploading' || t.status === 'hashing' || t.status === 'backending')) return 1
+      if (ts.some((t) => t.status === 'pending')) return 2
+      if (ts.some((t) => t.status === 'paused')) return 3
+      if (ts.some((t) => t.status === 'error' || t.status === 'canceled')) return 4
+      return 5
+    }
+    const s = item.task.status
+    if (s === 'uploading' || s === 'downloading' || s === 'hashing' || s === 'backending' || s === 'processing') return 1
+    if (s === 'pending') return 2
+    if (s === 'paused') return 3
+    if (s === 'error' || s === 'canceled') return 4
+    return 5
+  }
+
+  const seenFolderGroups = new Set<string>()
+  const rawItems: RenderItem[] = []
 
   tasks.forEach((task) => {
     if (task.type === 'package') {
-      renderItems.push({ kind: 'package', task })
+      rawItems.push({ kind: 'package', task })
       return
     }
 
@@ -168,7 +161,7 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
         seenFolderGroups.add(groupId)
         const groupTasks = tasks.filter((t) => getTaskGroupId(t) === groupId)
         const groupName = getTaskGroupName(groupTasks[0]) || '文件夹上传'
-        renderItems.push({
+        rawItems.push({
           kind: 'folderGroup',
           groupId,
           groupName,
@@ -178,8 +171,21 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
       return
     }
 
-    renderItems.push({ kind: 'single', task })
+    rawItems.push({ kind: 'single', task })
   })
+
+  // Sort items: 正在进行的排前面 (1), 等待排队的放中间 (2, 3), 失败的 (4), 已完成的沉底 (5)
+  const allSortedItems = [...rawItems].sort((a, b) => getItemPriority(a) - getItemPriority(b))
+
+  const activeItems = allSortedItems.filter((item) => getItemPriority(item) < 5)
+  const completedItems = allSortedItems.filter((item) => getItemPriority(item) === 5)
+
+  const displayedItems =
+    activeTab === 'active'
+      ? activeItems
+      : activeTab === 'completed'
+      ? completedItems
+      : allSortedItems
 
   return (
     <div className="flex flex-col select-none">
@@ -221,51 +227,52 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
         </div>
       </div>
 
-      {/* Expired File Handles Rebind Alert Banner */}
-      {hasExpiredHandles && (
-        <div className="mb-2.5 rounded-xl border border-amber-200/90 bg-amber-50/80 p-2.5 dark:border-amber-900/60 dark:bg-amber-950/40 text-xs">
-          <div className="flex items-center space-x-1.5 text-amber-800 dark:text-amber-200 font-semibold">
-            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span>检测到 {rebindableTasks.length} 个上传任务句柄已失效</span>
-          </div>
-          <p className="mt-1 text-[11px] text-amber-700/90 dark:text-amber-300/80 leading-relaxed">
-            页面刷新后浏览器释放了本地文件访问。只需选中原文件夹，即可自动重新关联并继续断点续传（不会重传已完成部分）。
-          </p>
-          <div className="mt-2 flex items-center space-x-2">
-            <button
-              onClick={() => rebindFolderInputRef.current?.click()}
-              className="flex items-center space-x-1 rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-xs hover:bg-amber-700 transition-colors cursor-pointer"
-            >
-              <FolderUp className="h-3 w-3" />
-              <span>重新关联本地文件夹</span>
-            </button>
-            <button
-              onClick={() => rebindFileInputRef.current?.click()}
-              className="flex items-center space-x-1 rounded-lg border border-amber-300 bg-white/80 px-2 py-1 text-[11px] font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-900/50 dark:text-amber-200 hover:bg-white transition-colors cursor-pointer"
-            >
-              <Upload className="h-3 w-3" />
-              <span>选择文件</span>
-            </button>
-          </div>
+      {/* Tabs */}
+      {tasks.length > 0 && (
+        <div className="flex items-center space-x-1 p-0.5 mb-2.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-[11px] font-medium">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`flex-1 flex items-center justify-center space-x-1 py-1 rounded-md transition-all cursor-pointer ${
+              activeTab === 'all'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-semibold'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <span>{t('home.transfer.tab_all') || '全部'}</span>
+            <span className="font-mono text-[10px] opacity-75">({allSortedItems.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`flex-1 flex items-center justify-center space-x-1 py-1 rounded-md transition-all cursor-pointer ${
+              activeTab === 'active'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-semibold'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <span>{t('home.transfer.tab_active') || '进行中'}</span>
+            {activeItems.length > 0 && (
+              <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">
+                ({activeItems.length})
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`flex-1 flex items-center justify-center space-x-1 py-1 rounded-md transition-all cursor-pointer ${
+              activeTab === 'completed'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-semibold'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <span>{t('home.transfer.tab_completed') || '已完成'}</span>
+            {completedItems.length > 0 && (
+              <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                ({completedItems.length})
+              </span>
+            )}
+          </button>
         </div>
       )}
-
-      {/* Hidden Rebind File Pickers */}
-      <input
-        ref={rebindFolderInputRef}
-        type="file"
-        multiple
-        {...({ webkitdirectory: '', directory: '' } as any)}
-        className="hidden"
-        onChange={handleFolderRebind}
-      />
-      <input
-        ref={rebindFileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={handleFilesRebind}
-      />
 
       {/* Task List / Empty State */}
       {tasks.length === 0 ? (
@@ -273,9 +280,20 @@ export const TransferPanel: React.FC<TransferPanelProps> = ({
           <Inbox className="h-8 w-8 text-slate-300 dark:text-slate-700 stroke-[1.5]" />
           <p className="text-xs text-slate-500 dark:text-slate-400">{t('home.transfer.empty') || '暂无传输任务'}</p>
         </div>
+      ) : displayedItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-slate-400 space-y-1.5">
+          <Inbox className="h-8 w-8 text-slate-300 dark:text-slate-700 stroke-[1.5]" />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {activeTab === 'active'
+              ? '暂无进行中或等待的任务'
+              : activeTab === 'completed'
+              ? '暂无已完成的任务'
+              : t('home.transfer.empty') || '暂无传输任务'}
+          </p>
+        </div>
       ) : (
         <div className={`overflow-y-auto space-y-2.5 pr-0.5 ${isMobile ? 'max-h-[50vh]' : 'max-h-[340px]'}`}>
-          {renderItems.map((item) => {
+          {displayedItems.map((item) => {
             if (item.kind === 'package') {
               return (
                 <PackageTaskItem

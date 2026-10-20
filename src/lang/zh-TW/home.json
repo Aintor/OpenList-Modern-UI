@@ -326,6 +326,9 @@
   },
   "transfer": {
     "title": "傳輸列表",
+    "tab_all": "全部",
+    "tab_active": "進行中",
+    "tab_completed": "已完成",
     "empty": "暫無傳輸任務",
     "settings": "傳輸設定",
     "section_concurrency": "同時進行任務數",
