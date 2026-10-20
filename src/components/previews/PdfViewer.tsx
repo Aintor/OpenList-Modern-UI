@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,6 +14,9 @@ import {
   AlertCircle,
   RefreshCw,
   Scan,
+  Check,
+  ChevronDown,
+  Shrink,
 } from 'lucide-react'
 
 // Configure pdfjs worker using standard URL asset resolution in Vite
@@ -31,6 +35,15 @@ interface PageMeta {
   aspectRatio: number
 }
 
+const ZOOM_PRESETS = [
+  { label: '50%', value: 0.5 },
+  { label: '75%', value: 0.75 },
+  { label: '100%', value: 1.0 },
+  { label: '125%', value: 1.25 },
+  { label: '150%', value: 1.5 },
+  { label: '200%', value: 2.0 },
+]
+
 export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
   const [numPages, setNumPages] = useState<number>(0)
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -44,6 +57,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
   const [isEditingPage, setIsEditingPage] = useState<boolean>(false)
   const [pageInputVal, setPageInputVal] = useState<string>('1')
   const [isDockHovered, setIsDockHovered] = useState<boolean>(false)
+  const [zoomDropdownOpen, setZoomDropdownOpen] = useState<boolean>(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -84,7 +98,6 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
             setPageMetas(metas)
           }
         } catch {
-          // Fallback if first page inspect fails
           const metas: PageMeta[] = []
           for (let i = 1; i <= doc.numPages; i++) {
             metas.push({ pageNumber: i, aspectRatio: 1.414 })
@@ -107,6 +120,49 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
       loadingTask.destroy()
     }
   }, [url])
+
+  // Trackpad pinch-to-zoom support (intercepts ctrlKey wheel on macOS Chrome/Safari)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        // deltaY < 0 is pinch out (zoom in), deltaY > 0 is pinch in (zoom out)
+        const zoomDelta = -e.deltaY * 0.005
+        setScale((prev) => {
+          const next = Math.min(3.0, Math.max(0.4, prev + zoomDelta))
+          return Math.round(next * 100) / 100
+        })
+      }
+    }
+
+    const handleGestureStart = (e: Event) => {
+      e.preventDefault()
+    }
+
+    const handleGestureChange = (e: any) => {
+      e.preventDefault()
+      if (e.scale) {
+        setScale((prev) => {
+          const factor = e.scale > 1 ? 1.02 : 0.98
+          const next = Math.min(3.0, Math.max(0.4, prev * factor))
+          return Math.round(next * 100) / 100
+        })
+      }
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    container.addEventListener('gesturestart', handleGestureStart, { passive: false })
+    container.addEventListener('gesturechange', handleGestureChange, { passive: false })
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel)
+      container.removeEventListener('gesturestart', handleGestureStart)
+      container.removeEventListener('gesturechange', handleGestureChange)
+    }
+  }, [])
 
   // Track currently visible page on scroll
   useEffect(() => {
@@ -153,17 +209,27 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
     setScale((prev) => Math.max(0.4, Math.round((prev - 0.15) * 100) / 100))
   }
 
-  const handleResetZoom = () => {
-    setScale(1.0)
+  const handleSetZoomPreset = (val: number) => {
+    setScale(val)
+    setZoomDropdownOpen(false)
   }
 
   const handleFitWidth = () => {
-    if (!containerRef.current || pageMetas.length === 0) return
-    // Approximate fit width: standard A4 width is ~595pt
+    if (!containerRef.current) return
     const containerWidth = containerRef.current.clientWidth - 48
     const baseWidth = 595
-    const targetScale = Math.min(2.0, Math.max(0.5, containerWidth / baseWidth))
+    const targetScale = Math.min(2.5, Math.max(0.4, containerWidth / baseWidth))
     setScale(Math.round(targetScale * 100) / 100)
+    setZoomDropdownOpen(false)
+  }
+
+  const handleFitPage = () => {
+    if (!containerRef.current) return
+    const containerHeight = containerRef.current.clientHeight - 64
+    const baseHeight = 842
+    const targetScale = Math.min(2.0, Math.max(0.4, containerHeight / baseHeight))
+    setScale(Math.round(targetScale * 100) / 100)
+    setZoomDropdownOpen(false)
   }
 
   const handleRotate = () => {
@@ -190,7 +256,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
         handleZoomOut()
       } else if ((e.metaKey || e.ctrlKey) && e.key === '0') {
         e.preventDefault()
-        handleResetZoom()
+        setScale(1.0)
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault()
         handleRotate()
@@ -240,9 +306,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
                 onClick={() => {
                   setLoading(true)
                   setError(null)
-                  // Trigger reload by updating url key
                 }}
-                className="flex items-center space-x-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700 transition-colors"
+                className="flex items-center space-x-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-indigo-500/15 hover:text-indigo-400 transition-colors"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 <span>重试加载</span>
@@ -252,7 +317,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
                 target="_blank"
                 rel="noreferrer"
                 download={fileName}
-                className="flex items-center space-x-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 transition-colors shadow-sm"
+                className="flex items-center space-x-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors shadow-sm"
               >
                 <Download className="h-3.5 w-3.5" />
                 <span>直接下载原文件</span>
@@ -289,17 +354,19 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
           onMouseEnter={() => setIsDockHovered(true)}
           onMouseLeave={() => setIsDockHovered(false)}
           className={`absolute bottom-5 left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-out ${
-            isDockHovered ? 'opacity-100 scale-100' : 'opacity-85 hover:opacity-100 scale-100'
+            isDockHovered || zoomDropdownOpen
+              ? 'opacity-100 scale-100'
+              : 'opacity-85 hover:opacity-100 scale-100'
           }`}
         >
-          <div className="flex items-center gap-1.5 rounded-full border border-slate-700/60 bg-slate-900/85 px-3 py-1.5 text-xs text-slate-200 shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-1.5 rounded-full border border-slate-700/60 bg-slate-900/85 hover:border-indigo-500/40 px-3 py-1.5 text-xs text-slate-200 shadow-2xl backdrop-blur-xl transition-all duration-300">
             {/* Page Navigation */}
             <div className="flex items-center space-x-0.5">
               <button
                 onClick={() => scrollToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
                 title="上一页 (←)"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -312,7 +379,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
                     value={pageInputVal}
                     onChange={(e) => setPageInputVal(e.target.value)}
                     onBlur={() => setIsEditingPage(false)}
-                    className="h-6 w-9 rounded bg-slate-800 px-1 text-center font-mono text-xs font-semibold text-white outline-none ring-1 ring-indigo-500"
+                    className="h-6 w-9 rounded bg-slate-800 px-1 text-center font-mono text-xs font-semibold text-indigo-300 outline-none ring-1 ring-indigo-500"
                   />
                   <span className="mx-1 font-mono text-slate-400">/ {numPages}</span>
                 </form>
@@ -322,8 +389,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
                     setPageInputVal(String(currentPage))
                     setIsEditingPage(true)
                   }}
-                  title="点击跳转页码"
-                  className="flex items-center space-x-1 rounded-md px-1.5 py-0.5 font-mono text-xs text-slate-300 hover:bg-slate-800/80 transition-colors cursor-pointer"
+                  title="点击输入页码快速跳转"
+                  className="flex items-center space-x-1 rounded-md px-1.5 py-0.5 font-mono text-xs text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400 transition-colors cursor-pointer"
                 >
                   <span className="font-semibold text-white">{currentPage}</span>
                   <span className="text-slate-500">/</span>
@@ -335,7 +402,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
                 onClick={() => scrollToPage(currentPage + 1)}
                 disabled={currentPage >= numPages}
                 title="下一页 (→)"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -344,30 +411,80 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
             {/* Divider */}
             <div className="h-3.5 w-px bg-slate-700/80 mx-0.5" />
 
-            {/* Zoom Controls */}
+            {/* Zoom Controls with Dropdown Presets */}
             <div className="flex items-center space-x-0.5">
               <button
                 onClick={handleZoomOut}
                 disabled={scale <= 0.4}
                 title="缩小 (Cmd -)"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400 disabled:opacity-30 transition-colors cursor-pointer"
               >
                 <ZoomOut className="h-3.5 w-3.5" />
               </button>
 
-              <button
-                onClick={handleResetZoom}
-                title="恢复 100% 原始缩放"
-                className="h-6 px-1.5 font-mono text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
-              >
-                {Math.round(scale * 100)}%
-              </button>
+              {/* Interactive Zoom Percentage with Preset Dropdown Menu */}
+              <DropdownMenu.Root open={zoomDropdownOpen} onOpenChange={setZoomDropdownOpen}>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    title="点击选择缩放倍率"
+                    className="flex items-center space-x-0.5 h-6 px-1.5 font-mono text-[11px] font-semibold text-slate-300 hover:text-indigo-400 hover:bg-indigo-500/15 data-[state=open]:text-indigo-400 data-[state=open]:bg-indigo-500/20 rounded transition-colors cursor-pointer outline-none"
+                  >
+                    <span>{Math.round(scale * 100)}%</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </button>
+                </DropdownMenu.Trigger>
+
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    side="top"
+                    align="center"
+                    sideOffset={10}
+                    className="z-50 min-w-[130px] rounded-xl border border-slate-700/80 bg-slate-900/95 p-1 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 text-xs text-slate-200 outline-none"
+                  >
+                    {ZOOM_PRESETS.map((preset) => {
+                      const isActive = Math.round(scale * 100) === Math.round(preset.value * 100)
+                      return (
+                        <DropdownMenu.Item
+                          key={preset.value}
+                          onClick={() => handleSetZoomPreset(preset.value)}
+                          className={`flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs outline-none transition-colors ${
+                            isActive
+                              ? 'bg-indigo-500/15 font-semibold text-indigo-400'
+                              : 'text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400 focus:bg-indigo-500/15 focus:text-indigo-400'
+                          }`}
+                        >
+                          <span>{preset.label}</span>
+                          {isActive && <Check className="h-3.5 w-3.5 text-indigo-400" />}
+                        </DropdownMenu.Item>
+                      )
+                    })}
+
+                    <DropdownMenu.Separator className="my-1 h-px bg-slate-700/80" />
+
+                    <DropdownMenu.Item
+                      onClick={handleFitWidth}
+                      className="flex cursor-pointer items-center space-x-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 outline-none transition-colors hover:bg-indigo-500/15 hover:text-indigo-400 focus:bg-indigo-500/15 focus:text-indigo-400"
+                    >
+                      <Scan className="h-3.5 w-3.5" />
+                      <span>适应宽度</span>
+                    </DropdownMenu.Item>
+
+                    <DropdownMenu.Item
+                      onClick={handleFitPage}
+                      className="flex cursor-pointer items-center space-x-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 outline-none transition-colors hover:bg-indigo-500/15 hover:text-indigo-400 focus:bg-indigo-500/15 focus:text-indigo-400"
+                    >
+                      <Shrink className="h-3.5 w-3.5" />
+                      <span>适应整页</span>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
 
               <button
                 onClick={handleZoomIn}
                 disabled={scale >= 3.0}
                 title="放大 (Cmd +)"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400 disabled:opacity-30 transition-colors cursor-pointer"
               >
                 <ZoomIn className="h-3.5 w-3.5" />
               </button>
@@ -375,7 +492,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
               <button
                 onClick={handleFitWidth}
                 title="适应窗口宽度"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400 transition-colors cursor-pointer"
               >
                 <Scan className="h-3.5 w-3.5" />
               </button>
@@ -389,7 +506,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
               <button
                 onClick={handleRotate}
                 title="顺时针旋转 90° (R)"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400 transition-colors cursor-pointer"
               >
                 <RotateCw className="h-3.5 w-3.5" />
               </button>
@@ -399,8 +516,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, fileName }) => {
                 title={isDarkMode ? '切换回白昼底色' : '夜间护眼防刺眼模式'}
                 className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors cursor-pointer ${
                   isDarkMode
-                    ? 'bg-indigo-600/30 text-indigo-400 hover:bg-indigo-600/40'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-600/30 text-indigo-400 hover:bg-indigo-600/40 ring-1 ring-indigo-500/40'
+                    : 'text-slate-300 hover:bg-indigo-500/15 hover:text-indigo-400'
                 }`}
               >
                 {isDarkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
